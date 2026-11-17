@@ -80,3 +80,16 @@ export const useLyrics = (track: Track | undefined) =>
       }
     },
   });
+
+export interface ExtensionStream { url: string; format?: string; quality?: string; audioQuality?: string; codec?: string | null }
+
+/** Asks each enabled extension (in order) for a high-quality stream of the track. */
+export async function resolveExtensionStream(track: Track, bases: string[]): Promise<ExtensionStream | null> {
+  for (const base of bases) {
+    const p = new URLSearchParams({ base, title: track.title, artist: track.artists.map((a) => a.name).join(', ') });
+    if (track.duration) p.set('duration', String(Math.round(track.duration)));
+    const res = await fetch(`/api/extension/resolve?${p}`, { signal: AbortSignal.timeout(15000) }).catch(() => null);
+    if (res?.ok) return res.json();
+  }
+  return null;
+}

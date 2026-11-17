@@ -7,6 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toggleLike, useIsLiked } from '@/lib/db';
 import { DownloadMenu, DownloadStateIcon } from './DownloadMenu';
+import { useNowSource } from '@/player/source';
 import { openListenTogether } from './ListenTogether';
 import { useLt } from '@/lib/listenTogether';
 import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/player/audio';
@@ -61,6 +62,7 @@ export function PlayerBar() {
   const s = usePlayer();
   const { panel, togglePanel, setNowPlaying } = useUi();
   const inJam = useLt((s) => !!s.session);
+  const sourceLabel = useNowSource((s) => s.label);
   const liked = useIsLiked(track?.id);
   const buffering = useBuffering();
   const VolumeIcon = s.muted || s.volume === 0 ? VolumeX : s.volume < 0.5 ? Volume1 : Volume2;
@@ -78,6 +80,7 @@ export function PlayerBar() {
             <div className="min-w-0">
               <button onClick={() => setNowPlaying(true)} className="block max-w-full truncate text-left text-[15px] font-semibold hover:underline">{track.title}</button>
               <ArtistLinks track={track} className="block text-sm text-text-muted" />
+              {sourceLabel && sourceLabel !== 'Downloaded' && <span className="mt-0.5 inline-block rounded-md bg-seed/20 px-1.5 text-[10px] font-bold tracking-wide text-seed-soft">{sourceLabel}</span>}
             </div>
             <IconButton
               label={liked ? 'Remove from Liked songs' : 'Add to Liked songs'}

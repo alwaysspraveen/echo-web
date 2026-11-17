@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Check, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { DOWNLOAD_OPTIONS, QUALITY_OPTIONS, useSettings } from '@/lib/settings';
@@ -70,6 +71,12 @@ export function SettingsDialog() {
         </section>
 
         <section className="mt-2">
+          <h3 className="mb-1 font-display text-lg font-bold">Extensions</h3>
+          <p className="mb-3 text-sm text-text-muted">Stream 320 kbps or lossless audio from an Echo extension server (for example the 320kbs-extension or lossless-extension). Songs it doesn't have play from YouTube Music as usual.</p>
+          <ExtensionsField />
+        </section>
+
+        <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Crossfade</h3>
           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
             <span>
@@ -124,6 +131,59 @@ function JamServerField() {
     <div className="flex gap-2">
       <Input defaultValue={server} key={server} onBlur={(e) => setServer(e.target.value)} aria-label="Listen Together server URL" spellCheck={false} />
       {server !== DEFAULT_LT_SERVER && <button onClick={() => setServer(DEFAULT_LT_SERVER)} className="shrink-0 rounded-full px-3 text-sm text-text-muted hover:bg-accent">Reset</button>}
+    </div>
+  );
+}
+
+function ExtensionsField() {
+  const { extensions, setExtensions, preferExtension, setPreferExtension } = useSettings();
+  const [url, setUrl] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/extension/manifest?base=${encodeURIComponent(url)}`);
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Could not add this extension');
+      if (extensions.some((x) => x.base === body.base)) throw new Error('Already added');
+      setExtensions([...extensions, { base: body.base, name: body.name, enabled: true }]);
+      setUrl('');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="grid gap-2">
+      {extensions.map((x) => (
+        <div key={x.base} className="flex items-center gap-3 rounded-2xl bg-glass p-3">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold">{x.name}</span>
+            <span className="block truncate text-xs text-text-muted">{x.base}</span>
+          </span>
+          <input type="checkbox" aria-label={`Use ${x.name}`} className="size-5 accent-[var(--seed)]" checked={x.enabled}
+            onChange={(e) => setExtensions(extensions.map((y) => (y.base === x.base ? { ...y, enabled: e.target.checked } : y)))} />
+          <button onClick={() => setExtensions(extensions.filter((y) => y.base !== x.base))} className="rounded-full px-2 text-sm text-text-muted hover:text-destructive" aria-label={`Remove ${x.name}`}>Remove</button>
+        </div>
+      ))}
+      <form onSubmit={add} className="flex gap-2">
+        <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Extension server address (https://…)" aria-label="Extension server address" spellCheck={false} />
+        <button type="submit" disabled={busy || !url.trim()} className="shrink-0 rounded-full bg-glass px-4 text-sm font-semibold hover:bg-surface-high disabled:opacity-50">{busy ? 'Checking…' : 'Add'}</button>
+      </form>
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {extensions.length > 0 && (
+        <label className="mt-1 flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
+          <span>
+            <span className="block font-semibold">Prefer extension audio</span>
+            <span className="block text-sm text-text-muted">Look for each song on your extensions first.</span>
+          </span>
+          <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={preferExtension} onChange={(e) => setPreferExtension(e.target.checked)} />
+        </label>
+      )}
     </div>
   );
 }
