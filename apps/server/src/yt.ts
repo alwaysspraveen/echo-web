@@ -180,12 +180,39 @@ export const getAlbum = (id: string) =>
       : undefined;
     const thumbnail = thumb(h);
     const title = text(h?.title) ?? 'Album';
+    const list = tracks(album.contents, { artists: artist ? [artist] : [], album: { id, name: title }, thumbnail });
+    await swapVideosForSongs(client, album, list);
     return {
       id, title, artist, thumbnail,
       subtitle: [text(h?.subtitle), text(h?.second_subtitle)].filter(Boolean).join(' • '),
-      tracks: tracks(album.contents, { artists: artist ? [artist] : [], album: { id, name: title }, thumbnail }),
+      tracks: list,
     };
   });
+
+/**
+ * Album pages often link some tracks to their music video (different cut, different length).
+ * The album's audio playlist (OLAK5uy_…) has the actual song ids, in the same order; use those.
+ */
+async function swapVideosForSongs(client: Innertube, album: Node, list: Track[]) {
+  if (!album.contents?.some((i: Node) => i.item_type === 'video')) return;
+  const audioPlaylist = JSON.stringify(album.header ?? {}).match(/OLAK5uy_[\w-]+/)?.[0]
+    ?? JSON.stringify(album.contents ?? []).match(/OLAK5uy_[\w-]+/)?.[0];
+  if (!audioPlaylist) return;
+  try {
+    const pl: Node = await client.music.getPlaylist(audioPlaylist);
+    const songs = (pl.items ?? []) as Node[];
+    if (songs.length !== list.length) return;
+    songs.forEach((s, i) => {
+      const songTitle = text(s.title)?.toLowerCase();
+      if (s.id && songTitle && songTitle === list[i].title.toLowerCase()) {
+        list[i].id = s.id;
+        if (s.duration?.seconds) list[i].duration = s.duration.seconds;
+      }
+    });
+  } catch {
+    /* keep the video ids */
+  }
+}
 
 export const getPlaylist = (id: string) =>
   cached(`playlist:${id}`, 30 * MIN, async (): Promise<PlaylistPage> => {
