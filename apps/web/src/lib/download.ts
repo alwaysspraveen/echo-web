@@ -13,5 +13,6 @@ export function downloadTrack(track: Track) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  toast(`Downloading "${track.title}"`, { description: format === 'opus' ? 'Best quality .opus. It appears in your Downloads in a few seconds.' : '.m4a. It appears in your Downloads in a few seconds.' });
+  const kind = format === 'mp3' ? 'MP3, 320 kbps' : format === 'opus' ? 'Original .opus' : 'Original .m4a';
+  toast(`Downloading "${track.title}"`, { description: `${kind}. It appears in your Downloads in a few seconds.` });
 }

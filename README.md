@@ -33,7 +33,7 @@ Open **Settings** at the bottom of the sidebar.
 
 - **Theme:** *Match artwork* (the default) takes its colors from the cover of the song that's playing, like the Android app's dynamic color. You can also pick one of 8 fixed colors.
 - **Streaming quality:** High (Opus ~160 kbps), Normal (AAC ~128 kbps) or Data saver (Opus ~70 kbps). Changing it mid-song keeps your position.
-- **Download format:** Best quality `.opus` (~160 kbps), or `.m4a` (AAC ~128 kbps) for Apple Music and QuickTime. Downloads are saved to your browser's Downloads folder, tagged with title, artist, album and cover art. The audio is copied without re-encoding, so no quality is lost. Tagging needs `ffmpeg` on the PATH; without it you get the untagged original file.
+- **Download format:** **MP3 320 kbps** by default (44.1 kHz, ID3v2.3 tags, encoded from the best source, Opus ~160 kbps). You can also pick the untouched originals: `.opus` (~160 kbps) or `.m4a` (AAC ~128 kbps). Every download is tagged with title, artist, album and cover art and saved to your browser's Downloads folder. MP3 needs `ffmpeg` on the PATH (`brew install ffmpeg`); the originals still download without it, just untagged.
 
 Download a song from its right-click menu, the download button in the player bar, or the Now Playing view. There's no 320 kbps option because YouTube Music only serves that to Premium accounts.
 
