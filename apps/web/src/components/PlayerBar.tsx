@@ -7,8 +7,8 @@ import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toggleLike, useIsLiked } from '@/lib/db';
 import { DownloadMenu, DownloadStateIcon } from './DownloadMenu';
-import { openJam } from './Jam';
-import { useJam } from '@/lib/jam';
+import { openListenTogether } from './ListenTogether';
+import { useLt } from '@/lib/listenTogether';
 import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/player/audio';
 import { useCurrentTrack, usePlayer, useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
@@ -60,13 +60,13 @@ export function PlayerBar() {
   const track = useCurrentTrack();
   const s = usePlayer();
   const { panel, togglePanel, setNowPlaying } = useUi();
-  const inJam = useJam((s) => !!s.session);
+  const inJam = useLt((s) => !!s.session);
   const liked = useIsLiked(track?.id);
   const buffering = useBuffering();
   const VolumeIcon = s.muted || s.volume === 0 ? VolumeX : s.volume < 0.5 ? Volume1 : Volume2;
 
   return (
-    <div className="glass mx-3 mb-3 grid h-[84px] grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-4 rounded-[28px] px-3">
+    <div className="glass relative z-50 mx-3 mb-3 grid h-[84px] grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-4 rounded-[28px] px-3">
       {/* Track */}
       <div className="flex min-w-0 items-center gap-3">
         {track ? (
@@ -133,7 +133,7 @@ export function PlayerBar() {
             </button>
           </DownloadMenu>
         )}
-        <IconButton label={inJam ? 'Jam' : 'Start a Jam'} active={inJam} onClick={() => (inJam ? togglePanel('jam') : openJam())}>
+        <IconButton label="Listen Together" active={inJam} onClick={() => (inJam ? togglePanel('jam') : openListenTogether())}>
           <AudioWaveform className="size-[18px]" />
         </IconButton>
         <IconButton label="Lyrics" active={panel === 'lyrics'} onClick={() => togglePanel('lyrics')}>

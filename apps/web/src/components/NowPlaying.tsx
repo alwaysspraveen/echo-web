@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { DownloadMenu, DownloadStateIcon } from './DownloadMenu';
 import { useCurrentTrack, useUi } from '@/player/store';
 import { Button } from '@/components/ui/button';
 import { Artwork } from './Artwork';
@@ -26,7 +25,7 @@ export function NowPlaying() {
   if (!open || !track) return null;
 
   return (
-    <div className="no-drag fixed inset-x-0 top-0 bottom-[99px] z-40 overflow-hidden bg-black animate-in fade-in-0 slide-in-from-bottom-4 duration-300" role="dialog" aria-label="Now playing">
+    <div className="no-drag fixed inset-0 z-40 overflow-hidden bg-black animate-in fade-in-0 slide-in-from-bottom-4 duration-300" role="dialog" aria-label="Now playing">
       {track.thumbnail && (
         <img src={track.thumbnail} alt="" aria-hidden referrerPolicy="no-referrer"
           className="absolute inset-0 size-full scale-125 object-cover opacity-70 blur-[90px] saturate-150" />
@@ -35,7 +34,7 @@ export function NowPlaying() {
 
       {/* On macOS desktop the window buttons sit top-left; .np-stage moves content below them. */}
       <div className="drag-area absolute inset-x-0 top-0 h-14" aria-hidden />
-      <div className="np-stage relative grid h-full grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-12 px-12 pt-6">
+      <div className="np-stage relative grid h-full grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-12 px-12 pt-6 pb-[108px]">
         {/* Rows: close button / artwork (takes what's left) / title. The text never shrinks. */}
         <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] pb-8">
           <Button variant="ghost" size="icon-lg" onClick={close} aria-label="Close now playing" className="-ml-2 text-white hover:bg-white/10">
@@ -51,14 +50,7 @@ export function NowPlaying() {
           </div>
           <div className="min-w-0">
             <h2 className="line-clamp-2 pb-1 font-display text-[clamp(1.75rem,3vw,2.5rem)] leading-tight font-extrabold tracking-tight text-white">{track.title}</h2>
-            <div className="flex items-center justify-between gap-4">
-              <ArtistLinks track={track} className="block min-w-0 pb-1 text-lg leading-snug text-white/75" />
-              <DownloadMenu track={track}>
-                <Button variant="ghost" className="shrink-0 bg-white/10 text-white hover:bg-white/20 data-[state=open]:bg-white/20">
-                  <DownloadStateIcon track={track} />Download
-                </Button>
-              </DownloadMenu>
-            </div>
+            <ArtistLinks track={track} className="block pb-1 text-lg leading-snug text-white/75" />
           </div>
         </div>
         <div className="scrollbar-thin min-h-0 overflow-y-auto [mask-image:linear-gradient(transparent,black_15%,black_85%,transparent)]">

@@ -11,7 +11,7 @@ import { getStore, usingRedis } from './store.js';
 // Random codes are 6 unambiguous characters; hosts may also choose their own (4–12 letters/digits).
 const CODE = /^[A-Z0-9]{4,12}$/;
 const POLL_MS = 20_000; // long-poll window (well under Vercel's function limit)
-const POLL_STEP_MS = 700;
+const POLL_STEP_MS = 250; // with the function next to Redis (both in bom1), a check is ~5 ms
 
 export const app = new Hono().basePath('/api');
 
@@ -24,7 +24,13 @@ const reply = (c: Context, room: Room, extra: Record<string, unknown> = {}, stat
 const token = (c: Context) => c.req.header('authorization')?.replace(/^Bearer\s+/i, '');
 const body = async (c: Context) => (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
 
-app.get('/health', (c) => c.json({ ok: true, storage: usingRedis() ? 'redis' : 'memory', now: now() }));
+app.get('/health', async (c) => {
+  // Time three quick storage reads, so slow storage is easy to spot.
+  const store = getStore();
+  const timings: number[] = [];
+  for (let i = 0; i < 3; i++) { const t = performance.now(); await store.version('HEALTH'); timings.push(Math.round(performance.now() - t)); }
+  return c.json({ ok: true, storage: usingRedis() ? 'redis' : 'memory', region: process.env.VERCEL_REGION ?? 'local', storageMs: timings, now: now() });
+});
 
 app.post('/jam', async (c) => {
   const b = await body(c);
