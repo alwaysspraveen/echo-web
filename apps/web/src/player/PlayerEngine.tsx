@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { fetchRadio, resolveExtensionStream, streamUrl } from '@/lib/api';
 import { useNowSource } from './source';
+import { COMPLETION_RATIO, recommend, recordListen, useBrainAdded } from '@/lib/brain';
 import { recordPlay, toggleLike } from '@/lib/db';
 import { useSettings } from '@/lib/settings';
 import { getOfflineAudio } from '@/lib/offline';
@@ -99,6 +100,38 @@ export function PlayerEngine() {
     audio.muted = muted;
   }, [volume, muted]);
 
+  // Echo Brain stats (as on Android): listening time per song, and a skip when you move on before 85%.
+  useEffect(() => {
+    let current = usePlayer.getState().queue[usePlayer.getState().index];
+    let listened = 0;
+    let lastT = audio.currentTime;
+    let ended = false;
+    const onTime = () => {
+      const d = audio.currentTime - lastT;
+      lastT = audio.currentTime;
+      if (!audio.paused && d > 0 && d < 1.5) listened += d * 1000; // ignore seeks
+    };
+    const onEnded = () => { ended = true; };
+    const flush = () => {
+      if (!current) return;
+      const duration = (current.duration ?? audio.duration) * 1000;
+      const skipped = !ended && duration > 0 && listened / duration < COMPLETION_RATIO && listened > 0;
+      recordListen(current, listened, skipped).catch(() => {});
+    };
+    const unsub = usePlayer.subscribe((s) => {
+      const t = s.queue[s.index];
+      if (t?.id === current?.id) return;
+      flush();
+      current = t; listened = 0; ended = false; lastT = 0;
+    });
+    const onSeeked = () => { lastT = audio.currentTime; };
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('seeked', onSeeked);
+    window.addEventListener('pagehide', flush);
+    return () => { unsub(); audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('ended', onEnded); audio.removeEventListener('seeked', onSeeked); window.removeEventListener('pagehide', flush); };
+  }, []);
+
   // Crossfade (Android: Settings → Crossfade, off by default, 5 s): near the end of a song, keep its
   // tail playing on a second player while fading it out, and fade the next song in.
   useEffect(() => {
@@ -130,10 +163,17 @@ export function PlayerEngine() {
     if (!track || repeat !== 'off' || index !== queueLength - 1 || radioFor === track.id) return;
     if (useLt.getState().session) return; // in Listen Together the shared queue is the queue
     const seed = track.id;
-    fetchRadio(seed)
+    // Echo Brain (Settings): add songs picked from your listening stats; otherwise plain radio.
+    const pick = useSettings.getState().echoBrain
+      ? recommend(track, new Set(usePlayer.getState().queue.map((t) => t.id))).then((picks) => {
+          if (picks.length) useBrainAdded.setState((s) => ({ ids: new Set([...s.ids, ...picks.map((p) => p.id)]) }));
+          return picks;
+        })
+      : fetchRadio(seed);
+    pick
       .then((tracks) => {
         const cur = usePlayer.getState();
-        if (cur.queue[cur.index]?.id === seed) cur.appendRadio(seed, tracks);
+        if (cur.queue[cur.index]?.id === seed && tracks.length) cur.appendRadio(seed, tracks);
       })
       .catch(() => {});
   }, [track, index, queueLength, repeat, radioFor]);

@@ -71,6 +71,17 @@ export function SettingsDialog() {
         </section>
 
         <section className="mt-2">
+          <h3 className="mb-1 font-display text-lg font-bold">Echo Brain (Beta)</h3>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
+            <span>
+              <span className="block font-semibold">Enable Echo Brain</span>
+              <span className="block text-sm text-text-muted">Automatically add AI recommendations based on your listening habits.</span>
+            </span>
+            <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={s.echoBrain} onChange={(e) => s.setEchoBrain(e.target.checked)} />
+          </label>
+        </section>
+
+        <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Extensions</h3>
           <p className="mb-3 text-sm text-text-muted">Stream 320 kbps or lossless audio from an Echo extension server (for example the 320kbs-extension or lossless-extension). Songs it doesn't have play from YouTube Music as usual.</p>
           <ExtensionsField />
