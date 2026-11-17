@@ -23,6 +23,7 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={500}>
+      <div className="drag-strip" aria-hidden />
       <div className="flex h-full flex-col">
         <div className="flex min-h-0 flex-1 gap-3 p-3 pb-3">
           <Sidebar />

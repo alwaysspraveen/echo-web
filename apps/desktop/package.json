@@ -1,0 +1,90 @@
+{
+  "name": "echo-music-desktop",
+  "productName": "Echo Music",
+  "version": "0.1.0",
+  "description": "Echo Music for desktop: YouTube Music without ads, with synced lyrics and MP3 downloads.",
+  "author": "Echo Music",
+  "license": "GPL-3.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "bundle": "node scripts/bundle.mjs",
+    "ffmpeg:win": "node scripts/fetch-ffmpeg.mjs win32 x64",
+    "start": "npm --prefix ../.. run build && npm run bundle && electron .",
+    "dist:win": "npm --prefix ../.. run build && npm run bundle && npm run ffmpeg:win && electron-builder --win nsis --x64",
+    "ffmpeg:mac": "node scripts/fetch-ffmpeg.mjs darwin arm64",
+    "dist:mac": "npm --prefix ../.. run build && npm run bundle && npm run ffmpeg:mac && electron-builder --mac dmg --arm64"
+  },
+  "devDependencies": {
+    "electron": "45.2.2",
+    "electron-builder": "26.18.1",
+    "esbuild": "0.28.2"
+  },
+  "build": {
+    "appId": "app.echomusic.web",
+    "productName": "Echo Music",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/dist",
+        "to": "web"
+      },
+      {
+        "from": "vendor/${platform}-${arch}",
+        "to": "bin",
+        "filter": [
+          "ffmpeg*"
+        ]
+      },
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Echo Music",
+      "artifactName": "Echo-Music-Setup-${version}.exe"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon-mac.png",
+      "category": "public.app-category.music",
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "artifactName": "Echo-Music-${version}-${arch}.dmg"
+    }
+  }
+}
