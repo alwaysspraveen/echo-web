@@ -10,7 +10,9 @@ export class ApiError extends Error {
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`/api${path}`, { signal });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+    const body = await res.json().catch(() => null);
+    // No JSON body means the request never reached the Echo server (e.g. Vite's proxy got no answer).
+    if (!body) throw new ApiError("Can't reach the Echo server. Start the app with `npm run dev` from the echo-web folder (not apps/web), and check that terminal for red [server] errors", res.status);
     throw new ApiError(body.error ?? `Request failed (${res.status})`, res.status);
   }
   return res.json();
