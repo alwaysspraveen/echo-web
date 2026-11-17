@@ -114,6 +114,7 @@
 .desktop-mac .drag-area { -webkit-app-region: drag; }
 .desktop-mac .drag-area :is(button, a, input, form) { -webkit-app-region: no-drag; }
 .desktop-mac .sidebar-brand { padding-top: 34px; }
+.desktop-mac .np-stage { padding-top: 64px; }
 
 @utility glass {
   /* Web take on the app's Liquid Glass: blurred, saturated backdrop + light rim. */
