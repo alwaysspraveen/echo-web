@@ -1,0 +1,138 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/figtree";
+@import "@fontsource-variable/bricolage-grotesque";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Echo Music tokens, taken from Echo-Music/DESIGN.md:
+ * dark scheme generated from the seed #ED5564, translucent surfaceVariant cards (30% alpha),
+ * 24px corners, flat elevation, Liquid-Glass-style blur on floating chrome.
+ */
+:root {
+  --bg: #191113;
+  --surface: #22191b;
+  --surface-high: #2f2426;
+  --card-glass: rgb(82 67 69 / 0.3);
+  --text: #f0dee0;
+  --text-muted: #d6c2c3;
+  --text-faint: #a08c8e;
+  --seed: #ed5564;
+  --seed-soft: #ffb2b8;
+  --line: rgb(240 222 224 / 0.1);
+
+  /* shadcn variable names */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface-high);
+  --popover-foreground: var(--text);
+  --primary: var(--seed);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-high);
+  --secondary-foreground: var(--text);
+  --muted: rgb(240 222 224 / 0.16);
+  --muted-foreground: var(--text-muted);
+  --accent: rgb(240 222 224 / 0.08);
+  --accent-foreground: var(--text);
+  --destructive: #ffb4ab;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--seed-soft);
+  --radius: 1rem;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Figtree Variable", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Figtree Variable", sans-serif;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-high: var(--surface-high);
+  --color-glass: var(--card-glass);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-seed: var(--seed);
+  --color-seed-soft: var(--seed-soft);
+  --color-line: var(--line);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-card: 24px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/60;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg font-sans text-text antialiased;
+    overflow: hidden;
+  }
+  :focus-visible {
+    outline: 2px solid var(--seed-soft);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgb(237 85 100 / 0.4);
+  }
+}
+
+@utility glass {
+  /* Web take on the app's Liquid Glass: blurred, saturated backdrop + light rim. */
+  background: rgb(18 18 18 / 0.55);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(240 222 224 / 0.18) transparent;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -8,7 +8,8 @@
     "build": "npm run build -w apps/web",
     "test": "npm test -w apps/web",
     "typecheck": "npm run typecheck -w apps/server && npm run typecheck -w apps/web",
-    "smoke": "npm run smoke -w apps/server"
+    "smoke": "npm run smoke -w apps/server",
+    "start": "npm run start -w apps/server"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
