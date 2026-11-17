@@ -5,6 +5,7 @@ import { QUALITIES, streamAudio, type Quality } from './stream.ts';
 import { findLyrics } from './lyrics.ts';
 import { allowedArtUrl, fetchArt } from './art.ts';
 import { downloadTrack } from './download.ts';
+import { manifestName, normalizeBase, resolveExtension } from './extensions.ts';
 
 const VIDEO_ID = /^[\w-]{11}$/;
 const BROWSE_ID = /^[\w-]{2,80}$/;
@@ -21,6 +22,22 @@ api.get('/moods/:params', async (c) => {
   const params = c.req.param('params');
   if (!/^[\w%=-]{4,200}$/.test(params)) return c.json({ error: 'Bad category' }, 400);
   return c.json(await getMoodCategory(decodeURIComponent(params)));
+});
+
+// Audio extensions (320 kbps / lossless), like Echo for Android's Extension Sources.
+api.get('/extension/manifest', async (c) => {
+  const base = normalizeBase(c.req.query('base'));
+  if (!base) return c.json({ error: 'Enter an http(s) address' }, 400);
+  const name = await manifestName(base);
+  return name ? c.json({ base, name }) : c.json({ error: "That server didn't answer like an Echo extension (no manifest.json)" }, 404);
+});
+api.get('/extension/resolve', async (c) => {
+  const base = normalizeBase(c.req.query('base'));
+  const title = c.req.query('title')?.slice(0, 300);
+  const artist = c.req.query('artist')?.slice(0, 300) ?? '';
+  if (!base || !title) return c.json({ error: 'Missing base or title' }, 400);
+  const stream = await resolveExtension(base, title, artist, Number(c.req.query('duration')) || undefined);
+  return stream ? c.json(stream) : c.json({ error: 'Not available on this extension' }, 404);
 });
 
 api.get('/search', async (c) => {

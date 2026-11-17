@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { fetchRadio, streamUrl } from '@/lib/api';
+import { fetchRadio, resolveExtensionStream, streamUrl } from '@/lib/api';
+import { useNowSource } from './source';
 import { recordPlay, toggleLike } from '@/lib/db';
 import { useSettings } from '@/lib/settings';
 import { getOfflineAudio } from '@/lib/offline';
@@ -47,13 +48,24 @@ export function PlayerEngine() {
     loadedId.current = id;
     if (!restoring) recordPlay(track);
     // Downloaded songs play from the stored file (works with no network); others stream.
-    getOfflineAudio(id).catch(() => undefined).then((blob) => {
+    getOfflineAudio(id).catch(() => undefined).then(async (blob) => {
       if (loadedId.current !== id) return; // user already moved on
+      // Extensions (Settings → Extensions): if one has this song in higher quality, play that instead.
+      const { extensions, preferExtension, quality } = useSettings.getState();
+      const bases = extensions.filter((e) => e.enabled).map((e) => e.base);
+      let ext: Awaited<ReturnType<typeof resolveExtensionStream>> = null;
+      if (!blob && preferExtension && bases.length && quality !== 'low') {
+        useNowSource.setState({ label: 'Checking extensions…' });
+        ext = await resolveExtensionStream(track, bases).catch(() => null);
+        if (loadedId.current !== id) return;
+      }
+      useNowSource.setState({ label: blob ? 'Downloaded' : ext ? [ext.audioQuality || ext.quality, ext.codec || ext.format].filter(Boolean).join(' · ').toUpperCase() || 'EXTENSION' : null });
       // Release the previous downloaded file later: a crossfade may still be playing its tail.
       if (offlineUrl.current) { const old = offlineUrl.current; setTimeout(() => URL.revokeObjectURL(old), 20_000); offlineUrl.current = null; }
       switching.current = true;
       loadedQuality.current = useSettings.getState().quality;
       if (blob) audio.src = offlineUrl.current = URL.createObjectURL(blob);
+      else if (ext) audio.src = ext.url;
       else audio.src = streamUrl(id, loadedQuality.current);
       if (!restoring || usePlayer.getState().playing) audio.play().catch(() => {});
     });
@@ -64,7 +76,7 @@ export function PlayerEngine() {
   useEffect(() => {
     if (!track || loadedId.current !== track.id || loadedQuality.current === quality) return;
     loadedQuality.current = quality;
-    if (offlineUrl.current) return; // playing the downloaded file; quality doesn't apply
+    if (offlineUrl.current || useNowSource.getState().label) return; // downloaded file or extension stream: quality doesn't apply
     const at = audio.currentTime;
     const wasPlaying = !audio.paused;
     switching.current = true;

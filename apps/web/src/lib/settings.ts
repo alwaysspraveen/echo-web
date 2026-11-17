@@ -17,6 +17,8 @@ export const DOWNLOAD_OPTIONS: { id: DownloadFormat; name: string; detail: strin
   { id: 'm4a', name: 'Original (.m4a)', detail: 'AAC, about 128 kbps. Plays everywhere, including Apple Music and QuickTime.' },
 ];
 
+export interface Extension { base: string; name: string; enabled: boolean }
+
 /** 'artwork' follows the playing song's cover; anything else is a preset id from theme.ts. */
 export type ThemeChoice = 'artwork' | string;
 
@@ -26,12 +28,16 @@ interface Settings {
   downloadFormat: DownloadFormat;
   crossfade: boolean;
   crossfadeSeconds: number;
+  extensions: Extension[];
+  preferExtension: boolean;
   settingsOpen: boolean;
   setQuality: (q: Quality) => void;
   setTheme: (t: ThemeChoice) => void;
   setDownloadFormat: (f: DownloadFormat) => void;
   setCrossfade: (on: boolean) => void;
   setCrossfadeSeconds: (s: number) => void;
+  setExtensions: (e: Extension[]) => void;
+  setPreferExtension: (on: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
 }
 
@@ -43,18 +49,22 @@ export const useSettings = create<Settings>()(
       downloadFormat: 'mp3',
       crossfade: false,
       crossfadeSeconds: 5,
+      extensions: [],
+      preferExtension: true,
       settingsOpen: false,
       setQuality: (quality) => set({ quality }),
       setTheme: (theme) => set({ theme }),
       setDownloadFormat: (downloadFormat) => set({ downloadFormat }),
       setCrossfade: (crossfade) => set({ crossfade }),
       setCrossfadeSeconds: (crossfadeSeconds) => set({ crossfadeSeconds }),
+      setExtensions: (extensions) => set({ extensions }),
+      setPreferExtension: (preferExtension) => set({ preferExtension }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
     }),
     {
       name: 'echo-settings',
       version: 1,
-      partialize: ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds }) => ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds }),
+      partialize: ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds, extensions, preferExtension }) => ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds, extensions, preferExtension }),
       // v0 defaulted downloads to .opus; MP3 320 is the default from v1 on.
       migrate: (state, version) => (version < 1 ? { ...(state as object), downloadFormat: 'mp3' } : state) as Settings,
     },
