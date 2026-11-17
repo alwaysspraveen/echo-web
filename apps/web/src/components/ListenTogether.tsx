@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { approve, decline, joinRoom, leaveRoom, ltIsHost, setAllowControl, startRoom, useLt } from '@/lib/listenTogether';
+import { acceptSuggestion, approve, decline, declineSuggestion, joinRoom, leaveRoom, ltIsHost, startRoom, useLt } from '@/lib/listenTogether';
 import { useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
 
@@ -79,7 +79,7 @@ export function ListenTogetherDialog() {
 }
 
 export function ListenTogetherPanel() {
-  const { session, status, users, requests, allowControl, hostId } = useLt();
+  const { session, status, users, requests, suggestions, hostId } = useLt();
   if (!session) return <p className="px-5 py-6 text-sm text-text-muted">You're not in a room.</p>;
   const host = ltIsHost();
   const copy = () => navigator.clipboard.writeText(session.roomCode).then(() => toast('Code copied'));
@@ -123,20 +123,30 @@ export function ListenTogetherPanel() {
         ))}
       </ul>
 
-      {host && (
-        <label className="mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
-          <span>
-            <span className="block font-semibold">Everyone can control</span>
-            <span className="block text-sm text-text-muted">Let guests play, pause, skip and seek.</span>
-          </span>
-          <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={allowControl} onChange={(e) => setAllowControl(e.target.checked)} />
-        </label>
+      {host && suggestions.length > 0 && (
+        <section className="mt-4 rounded-2xl bg-glass p-3" aria-label="Suggestions">
+          <h3 className="mb-1 px-1 text-sm font-semibold">Suggested songs</h3>
+          {suggestions.map((sg) => (
+            <div key={sg.id} className="flex items-center gap-2 rounded-xl px-1 py-1.5">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{sg.track.title}</span>
+                <span className="block truncate text-xs text-text-muted">from {sg.from}</span>
+              </span>
+              <Button size="sm" onClick={() => acceptSuggestion(sg)}><Check />Add</Button>
+              <Button size="sm" variant="ghost" onClick={() => declineSuggestion(sg)} aria-label={`Decline ${sg.track.title}`}><X /></Button>
+            </div>
+          ))}
+        </section>
       )}
 
-      <p className="mt-4 px-1 text-sm text-text-faint">Each device plays the music itself. Songs you add with "Add to queue" go to the shared queue.</p>
+      <p className="mt-4 px-1 text-sm text-text-faint">
+        {host
+          ? 'You control playback. Everyone hears what you play; guests can suggest songs.'
+          : 'The host controls playback. Use "Add to queue" on any song to suggest it to the host.'}
+      </p>
 
       <Button variant="ghost" className="mt-3 w-full text-destructive" onClick={() => leaveRoom()}>
-        <LogOut />{host ? 'End room for everyone' : 'Leave room'}
+        <LogOut />Leave room
       </Button>
     </div>
   );

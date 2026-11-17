@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import type { Track } from '@echo/shared';
 import {
-  fromLt, ltCanControl, ltIsHost, requestSync, resumeRoom, refreshServerList, sendAction, sendBufferReady, setLtListener, toLt,
+  fromLt, ltCanControl, ltIsHost, requestSync, suggest, resumeRoom, refreshServerList, sendAction, sendBufferReady, setLtListener, toLt,
   useLt, type LtTrack, type PlaybackAction, type RoomSnapshot,
 } from '@/lib/listenTogether';
 import { audio, seek } from '@/player/audio';
@@ -18,6 +18,8 @@ let sent: { action: string; trackId?: string; position?: number; at: number }[] 
 let bufferFor: string | null = null;
 // Seeks we make to follow the room fire 'seeked' later; don't report those as user seeks.
 let ourSeekAt = 0;
+// The room's play state as we last heard it, to restore if the server refuses our change.
+let roomPlaying = false;
 
 function send(a: PlaybackAction) {
   sent = [...sent.filter((s) => now() - s.at < 4000), { action: a.action, trackId: a.trackId, position: a.position, at: now() }];
@@ -62,6 +64,7 @@ function loadQueue(track: LtTrack, queue: LtTrack[] | undefined, playing: boolea
 
 function applySnapshot(s: RoomSnapshot) {
   if (!s.currentTrack) return;
+  roomPlaying = s.isPlaying;
   loadQueue(s.currentTrack, s.queue, s.isPlaying);
   seekWhenReady(() => (s.position + (s.isPlaying ? Math.max(0, now() - s.lastUpdate) : 0)) / 1000);
 }
@@ -71,16 +74,19 @@ function applyAction(a: PlaybackAction) {
   const p = usePlayer.getState();
   switch (a.action) {
     case 'change_track':
+      roomPlaying = false;
       if (a.trackInfo?.id) { loadQueue(a.trackInfo, a.queue, false); seekWhenReady(() => (a.position ?? 0) / 1000); }
       break;
     case 'play': {
       const base = a.position ?? posMs();
       const at = a.serverTime || now();
+      roomPlaying = true;
       setPlayer({ playing: true });
       seekWhenReady(() => (base + Math.max(0, now() - at)) / 1000);
       break;
     }
     case 'pause':
+      roomPlaying = false;
       setPlayer({ playing: false });
       if (a.position != null) seekWhenReady(() => a.position! / 1000);
       break;
@@ -139,6 +145,8 @@ export function ListenTogetherController() {
     refreshServerList();
     resumeRoom();
     setLtListener({
+      onDenied: () => { setPlayer({ playing: roomPlaying }); requestSync(); },
+      onAddSuggested: (t) => usePlayer.getState().addToQueue([fromLt(t)]), // host: sync_queue goes out automatically
       onAction: applyAction,
       onSnapshot: (s) => applySnapshot(s),
       onBufferComplete: () => {},
@@ -161,14 +169,16 @@ export function ListenTogetherController() {
         // Guests without control: suggest added songs to the host, otherwise snap back to the room.
         const added = s.queue.filter((t) => !prev.queue.some((x) => x.id === t.id));
         if (added.length && !trackChanged) {
-          for (const t of added) sendAction({ action: 'queue_add', trackId: t.id, trackInfo: toLt(t) });
-          toast('Added to the shared queue');
+          for (const t of added) suggest(toLt(t));
+          setPlayer({ queue: prev.queue, index: prev.index });
+          toast(added.length > 1 ? `Suggested ${added.length} songs to the host` : `Suggested "${added[0].title}" to the host`);
         } else if (trackChanged && !(audio.ended || audio.duration - audio.currentTime < 1.5)) {
           toast('Only the host can change songs in this room');
+          setPlayer({ queue: prev.queue, index: prev.index, playing: prev.playing }); // undo locally
           requestSync();
         } else if (playChanged && !trackChanged) {
           toast('Only the host can play or pause in this room');
-          requestSync();
+          setPlayer({ playing: prev.playing }); // undo locally
         }
         return;
       }

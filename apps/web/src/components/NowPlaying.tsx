@@ -34,12 +34,12 @@ export function NowPlaying() {
 
       {/* On macOS desktop the window buttons sit top-left; .np-stage moves content below them. */}
       <div className="drag-area absolute inset-x-0 top-0 h-14" aria-hidden />
+      <Button variant="ghost" size="icon-lg" onClick={close} aria-label="Close now playing" className="absolute top-5 right-6 z-10 text-white hover:bg-white/10">
+        <ChevronDown className="size-6" />
+      </Button>
       <div className="np-stage relative grid h-full grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-12 px-12 pt-6 pb-[108px]">
-        {/* Rows: close button / artwork (takes what's left) / title. The text never shrinks. */}
-        <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] pb-8">
-          <Button variant="ghost" size="icon-lg" onClick={close} aria-label="Close now playing" className="-ml-2 text-white hover:bg-white/10">
-            <ChevronDown className="size-6" />
-          </Button>
+        {/* Rows: artwork (takes what's left) / title. The text never shrinks. */}
+        <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] pb-8">
           {/* Size container: the artwork is the largest square that fits both width and height. */}
           <div className="flex min-h-0 items-end py-5" style={{ containerType: 'size' }}>
             <Artwork
