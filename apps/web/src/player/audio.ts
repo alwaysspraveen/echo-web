@@ -4,6 +4,48 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 export const audio = typeof Audio !== 'undefined' ? new Audio() : (null as unknown as HTMLAudioElement);
 if (audio) audio.preload = 'auto';
 
+// ---------- volume with fades (for crossfade) ----------
+let baseVolume = 0.64;
+let gain = 1;
+const applyVolume = () => { if (audio) audio.volume = Math.max(0, Math.min(1, baseVolume * gain)); };
+export function setBaseVolume(v: number) { baseVolume = v; applyVolume(); }
+
+/** Ramps a value from `from` to `to` over `ms`, calling `set` each frame. Returns a cancel function. */
+function ramp(from: number, to: number, ms: number, set: (v: number) => void, done?: () => void) {
+  const start = performance.now();
+  let raf = 0;
+  const tick = () => {
+    const t = Math.min(1, (performance.now() - start) / ms);
+    set(from + (to - from) * t);
+    if (t < 1) raf = requestAnimationFrame(tick); else done?.();
+  };
+  raf = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(raf);
+}
+
+let cancelFadeIn: (() => void) | null = null;
+/** Fade the main player in from silence (the incoming song of a crossfade). */
+export function fadeIn(ms: number) {
+  cancelFadeIn?.();
+  gain = 0; applyVolume();
+  cancelFadeIn = ramp(0, 1, ms, (g) => { gain = g; applyVolume(); }, () => { cancelFadeIn = null; });
+}
+export function resetFade() { cancelFadeIn?.(); cancelFadeIn = null; gain = 1; applyVolume(); }
+
+/** Second player that keeps the outgoing song's tail playing while it fades out. */
+const fader = typeof Audio !== 'undefined' ? new Audio() : (null as unknown as HTMLAudioElement);
+let cancelFadeOut: (() => void) | null = null;
+export function fadeOutCurrent(ms: number) {
+  if (!fader || !audio.currentSrc) return;
+  cancelFadeOut?.();
+  fader.src = audio.currentSrc;
+  fader.currentTime = audio.currentTime;
+  fader.volume = audio.volume;
+  fader.play().catch(() => {});
+  const startVol = audio.volume;
+  cancelFadeOut = ramp(1, 0, ms, (g) => { fader.volume = startVol * g; }, () => { fader.pause(); fader.removeAttribute('src'); fader.load(); cancelFadeOut = null; });
+}
+
 export function seek(seconds: number) {
   if (!audio || !Number.isFinite(seconds)) return;
   const max = Number.isFinite(audio.duration) ? audio.duration : seconds;

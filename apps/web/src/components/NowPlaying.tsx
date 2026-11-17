@@ -3,6 +3,8 @@ import { ChevronDown } from 'lucide-react';
 import { useCurrentTrack, useUi } from '@/player/store';
 import { Button } from '@/components/ui/button';
 import { Artwork } from './Artwork';
+import { VideoStage } from './VideoStage';
+import { cn } from '@/lib/utils';
 import { LyricsView } from './LyricsView';
 import { ArtistLinks } from './TrackList';
 
@@ -14,6 +16,7 @@ export function NowPlaying() {
   const open = useUi((s) => s.nowPlaying);
   const close = () => useUi.getState().setNowPlaying(false);
   const track = useCurrentTrack();
+  const videoMode = useUi((s) => s.videoMode);
 
   useEffect(() => {
     if (!open) return;
@@ -34,6 +37,20 @@ export function NowPlaying() {
 
       {/* On macOS desktop the window buttons sit top-left; .np-stage moves content below them. */}
       <div className="drag-area absolute inset-x-0 top-0 h-14" aria-hidden />
+      {/* Song / Video switch, like the Android player. */}
+      <div className="absolute top-5 left-1/2 z-10 flex -translate-x-1/2 rounded-full bg-white/10 p-1 backdrop-blur" role="radiogroup" aria-label="Show">
+        {([['Song', false], ['Video', true]] as const).map(([label, on]) => (
+          <button
+            key={label}
+            role="radio"
+            aria-checked={videoMode === on}
+            onClick={() => useUi.getState().setVideoMode(on)}
+            className={cn('h-8 rounded-full px-4 text-sm font-semibold', videoMode === on ? 'bg-white text-black' : 'text-white/80 hover:text-white')}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <Button variant="ghost" size="icon-lg" onClick={close} aria-label="Close now playing" className="absolute top-5 right-6 z-10 text-white hover:bg-white/10">
         <ChevronDown className="size-6" />
       </Button>
@@ -42,11 +59,19 @@ export function NowPlaying() {
         <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] pb-8">
           {/* Size container: the artwork is the largest square that fits both width and height. */}
           <div className="flex min-h-0 items-end py-5" style={{ containerType: 'size' }}>
-            <Artwork
-              src={track.thumbnail}
-              className="rounded-[28px] shadow-2xl shadow-black/50"
-              style={{ width: 'min(100cqw, 100cqh, 640px)', height: 'min(100cqw, 100cqh, 640px)' }}
-            />
+            {videoMode ? (
+              <VideoStage
+                trackId={track.id}
+                className="aspect-video rounded-[20px] shadow-2xl shadow-black/50"
+                style={{ width: 'min(100cqw, calc(100cqh * 16 / 9), 960px)' }}
+              />
+            ) : (
+              <Artwork
+                src={track.thumbnail}
+                className="rounded-[28px] shadow-2xl shadow-black/50"
+                style={{ width: 'min(100cqw, 100cqh, 640px)', height: 'min(100cqw, 100cqh, 640px)' }}
+              />
+            )}
           </div>
           <div className="min-w-0">
             <h2 className="line-clamp-2 pb-1 font-display text-[clamp(1.75rem,3vw,2.5rem)] leading-tight font-extrabold tracking-tight text-white">{track.title}</h2>

@@ -43,8 +43,8 @@ const dropSession = () => { session = null; };
 const URL_TTL = 60 * 60 * 1000;
 const resolved = new Map<string, Resolved>();
 
-export type Quality = 'high' | 'normal' | 'low';
-export const QUALITIES: Quality[] = ['high', 'normal', 'low'];
+export type Quality = 'high' | 'normal' | 'low' | 'video';
+export const QUALITIES: Quality[] = ['high', 'normal', 'low', 'video'];
 
 // YouTube audio itags in order of preference for each setting:
 // 251 Opus ~160k, 140 AAC ~128k, 250 Opus ~70k, 249 Opus ~50k, 139 HE-AAC ~48k.
@@ -52,6 +52,8 @@ const ITAG_PREFERENCE: Record<Quality, number[]> = {
   high: [251, 140, 250, 249, 139],
   normal: [140, 251, 250, 139, 249],
   low: [250, 249, 139, 140, 251],
+  // Video mode: a video-only stream (the audio keeps playing from the audio stream). 720p/480p/360p H.264, then VP9.
+  video: [136, 135, 134, 247, 244, 243],
 };
 
 async function resolve(videoId: string, quality: Quality): Promise<Resolved> {
@@ -60,7 +62,7 @@ async function resolve(videoId: string, quality: Quality): Promise<Resolved> {
   for (const name of CLIENTS) {
     try {
       const info = await client.getBasicInfo(videoId, { client: name });
-      const audio = (info.streaming_data?.adaptive_formats ?? []).filter((f) => f.has_audio && !f.has_video && !f.is_drc);
+      const audio = (info.streaming_data?.adaptive_formats ?? []).filter((f) => (quality === 'video' ? f.has_video && !f.has_audio : f.has_audio && !f.has_video && !f.is_drc));
       const format = ITAG_PREFERENCE[quality].map((itag) => audio.find((f) => f.itag === itag)).find(Boolean)
         ?? audio.sort((a, b) => b.bitrate - a.bitrate)[0];
       if (!format) throw new Error('Streaming data not available');

@@ -15,6 +15,7 @@ import { ListenTogetherDialog } from '@/components/ListenTogether';
 import { ListenTogetherController } from '@/components/ListenTogetherController';
 import HomePage from '@/pages/Home';
 import SearchPage from '@/pages/Search';
+import { ExplorePage, MoodPage } from '@/pages/Explore';
 import { AlbumPage, ArtistPage, LocalPlaylistPage, PlaylistPage } from '@/pages/Collections';
 import { DownloadsPage, HistoryPage, LibraryPage, LikedPage } from '@/pages/Library';
 
@@ -37,6 +38,8 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/search" element={<SearchPage />} />
+                <Route path="/explore" element={<ExplorePage />} />
+                <Route path="/explore/mood/:params" element={<MoodPage />} />
                 <Route path="/album/:id" element={<AlbumPage />} />
                 <Route path="/artist/:id" element={<ArtistPage />} />
                 <Route path="/playlist/:id" element={<PlaylistPage />} />

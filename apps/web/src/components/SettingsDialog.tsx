@@ -70,6 +70,24 @@ export function SettingsDialog() {
         </section>
 
         <section className="mt-2">
+          <h3 className="mb-1 font-display text-lg font-bold">Crossfade</h3>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
+            <span>
+              <span className="block font-semibold">Crossfade between songs</span>
+              <span className="block text-sm text-text-muted">The end of a song blends into the start of the next.</span>
+            </span>
+            <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={s.crossfade} onChange={(e) => s.setCrossfade(e.target.checked)} />
+          </label>
+          {s.crossfade && (
+            <label className="mt-3 flex items-center gap-3 px-1 text-sm">
+              <span className="w-16 text-text-muted">Duration</span>
+              <input type="range" min={1} max={12} step={1} value={s.crossfadeSeconds} onChange={(e) => s.setCrossfadeSeconds(Number(e.target.value))} className="flex-1 accent-[var(--seed)]" aria-label="Crossfade duration in seconds" />
+              <span className="w-10 text-right tabular-nums">{s.crossfadeSeconds} s</span>
+            </label>
+          )}
+        </section>
+
+        <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Download format</h3>
           <p className="mb-3 text-sm text-text-muted">Every download includes the title, artist, album and cover art.</p>
           <Choice label="Download format" value={s.downloadFormat} options={DOWNLOAD_OPTIONS} onChange={s.setDownloadFormat} />

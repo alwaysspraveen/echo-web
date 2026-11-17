@@ -129,6 +129,8 @@ export const useCurrentTrack = () => usePlayer((s) => (s.index >= 0 ? s.queue[s.
 interface UiState {
   panel: 'queue' | 'lyrics' | 'jam' | null;
   nowPlaying: boolean;
+  videoMode: boolean;
+  setVideoMode: (on: boolean) => void;
   setPanel: (p: UiState['panel']) => void;
   togglePanel: (p: 'queue' | 'lyrics' | 'jam') => void;
   setNowPlaying: (open: boolean) => void;
@@ -139,10 +141,12 @@ export const useUi = create<UiState>()(
     (set, get) => ({
       panel: 'queue',
       nowPlaying: false,
+      videoMode: false,
+      setVideoMode: (videoMode) => set({ videoMode }),
       setPanel: (panel) => set({ panel }),
       togglePanel: (p) => set({ panel: get().panel === p ? null : p }),
       setNowPlaying: (nowPlaying) => set({ nowPlaying }),
     }),
-    { name: 'echo-ui', partialize: ({ panel }) => ({ panel }) },
+    { name: 'echo-ui', partialize: ({ panel, videoMode }) => ({ panel, videoMode }) },
   ),
 );
