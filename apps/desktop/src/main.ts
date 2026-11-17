@@ -100,8 +100,10 @@ if (!app.requestSingleInstanceLock()) {
       item.setSavePath(target);
     });
 
-    // Deny camera/mic/notifications etc.; the app needs none of them.
-    session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
+    // Allow only writing to the clipboard (Copy room code); deny camera/mic/notifications etc.
+    const allowed = new Set(['clipboard-sanitized-write']);
+    session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(allowed.has(perm)));
+    session.defaultSession.setPermissionCheckHandler((_wc, perm) => allowed.has(perm));
 
     createWindow();
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { acceptSuggestion, approve, decline, declineSuggestion, joinRoom, leaveRoom, ltIsHost, startRoom, useLt } from '@/lib/listenTogether';
 import { useUi } from '@/player/store';
-import { cn } from '@/lib/utils';
+import { cn, copyText } from '@/lib/utils';
 
 /** Opens the Listen Together panel when in a room, otherwise the Start/Join dialog. */
 export function openListenTogether() {
@@ -82,7 +82,7 @@ export function ListenTogetherPanel() {
   const { session, status, users, requests, suggestions, hostId } = useLt();
   if (!session) return <p className="px-5 py-6 text-sm text-text-muted">You're not in a room.</p>;
   const host = ltIsHost();
-  const copy = () => navigator.clipboard.writeText(session.roomCode).then(() => toast('Code copied'));
+  const copy = () => copyText(session.roomCode).then((ok) => toast(ok ? `Code ${session.roomCode} copied` : `Couldn't copy. The code is ${session.roomCode}`));
 
   return (
     <div className="px-4 pb-6">
