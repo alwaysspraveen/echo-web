@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import {
-  Heart, ListMusic, Loader2, MicVocal, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX,
+  AudioWaveform, Heart, ListMusic, Loader2, MicVocal, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toggleLike, useIsLiked } from '@/lib/db';
 import { DownloadMenu, DownloadStateIcon } from './DownloadMenu';
+import { openJam } from './Jam';
+import { useJam } from '@/lib/jam';
 import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/player/audio';
 import { useCurrentTrack, usePlayer, useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
@@ -58,6 +60,7 @@ export function PlayerBar() {
   const track = useCurrentTrack();
   const s = usePlayer();
   const { panel, togglePanel, setNowPlaying } = useUi();
+  const inJam = useJam((s) => !!s.session);
   const liked = useIsLiked(track?.id);
   const buffering = useBuffering();
   const VolumeIcon = s.muted || s.volume === 0 ? VolumeX : s.volume < 0.5 ? Volume1 : Volume2;
@@ -130,6 +133,9 @@ export function PlayerBar() {
             </button>
           </DownloadMenu>
         )}
+        <IconButton label={inJam ? 'Jam' : 'Start a Jam'} active={inJam} onClick={() => (inJam ? togglePanel('jam') : openJam())}>
+          <AudioWaveform className="size-[18px]" />
+        </IconButton>
         <IconButton label="Lyrics" active={panel === 'lyrics'} onClick={() => togglePanel('lyrics')}>
           <MicVocal className="size-[18px]" />
         </IconButton>

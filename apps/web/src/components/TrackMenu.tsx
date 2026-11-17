@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { Disc3, Download, FileAudio, HardDriveDownload, Heart, HeartOff, ListEnd, ListPlus, ListStart, Plus, Radio, Trash2, UserRound } from 'lucide-react';
+import { Disc3, FileAudio, HardDriveDownload, Heart, HeartOff, ListEnd, ListPlus, ListStart, Plus, Radio, Trash2, UserRound } from 'lucide-react';
 import type { Track } from '@echo/shared';
 import {
   ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger,
@@ -12,6 +12,7 @@ import {
 import { addToPlaylist, toggleLike, useIsLiked, usePlaylists } from '@/lib/db';
 import { fetchRadio } from '@/lib/api';
 import { downloadTrack } from '@/lib/download';
+import { useSettings } from '@/lib/settings';
 import { removeOffline, saveOffline, useDownloadProgress, useIsOffline } from '@/lib/offline';
 import { usePlayer } from '@/player/store';
 import { openNewPlaylist } from './NewPlaylistDialog';
@@ -57,6 +58,8 @@ export function TrackMenuItems({ track, kind, onRemove, removeLabel = 'Remove fr
   const liked = useIsLiked(track.id);
   const offline = useIsOffline(track.id);
   const progress = useDownloadProgress(track.id);
+  const format = useSettings((st) => st.downloadFormat);
+  const fileLabel = format === 'mp3' ? 'Download MP3 file' : format === 'opus' ? 'Download .opus file' : 'Download .m4a file';
   const playlists = usePlaylists();
   const artist = track.artists.find((a) => a.id);
 
@@ -82,19 +85,15 @@ export function TrackMenuItems({ track, kind, onRemove, removeLabel = 'Remove fr
           {playlists.map((p) => <M.Item key={p.id} onSelect={() => add(p.id, p.name)}>{p.name}</M.Item>)}
         </M.SubContent>
       </M.Sub>
-      <M.Sub>
-        <M.SubTrigger><Download />Download</M.SubTrigger>
-        <M.SubContent className="w-60">
-          {progress !== undefined ? (
-            <M.Item onSelect={() => {}}><HardDriveDownload />Downloading… {Math.round(progress * 100)}%</M.Item>
-          ) : offline ? (
-            <M.Item variant="destructive" onSelect={() => removeOffline(track)}><Trash2 />Remove offline download</M.Item>
-          ) : (
-            <M.Item onSelect={() => saveOffline(track)}><HardDriveDownload />Save for offline</M.Item>
-          )}
-          <M.Item onSelect={() => downloadTrack(track)}><FileAudio />Download file (MP3)</M.Item>
-        </M.SubContent>
-      </M.Sub>
+      <M.Separator />
+      {progress !== undefined ? (
+        <M.Item onSelect={() => {}}><HardDriveDownload />Downloading for offline… {Math.round(progress * 100)}%</M.Item>
+      ) : offline ? (
+        <M.Item variant="destructive" onSelect={() => removeOffline(track)}><Trash2 />Remove offline download</M.Item>
+      ) : (
+        <M.Item onSelect={() => saveOffline(track)}><HardDriveDownload />Save for offline</M.Item>
+      )}
+      <M.Item onSelect={() => downloadTrack(track)}><FileAudio />{fileLabel}</M.Item>
       {onRemove && <M.Item variant="destructive" onSelect={onRemove}><Trash2 />{removeLabel}</M.Item>}
       {(artist || track.album?.id) && <M.Separator />}
       {artist?.id && <M.Item onSelect={() => navigate(`/artist/${artist.id}`)}><UserRound />Go to artist</M.Item>}

@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router';
-import { HardDriveDownload, Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
+import { AudioWaveform, HardDriveDownload, Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
 import { useSettings } from '@/lib/settings';
+import { useJam } from '@/lib/jam';
+import { openJam } from './Jam';
 import { usePlaylists } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import logo from '@/logo.png';
@@ -11,6 +13,7 @@ const link = ({ isActive }: { isActive: boolean }) =>
 
 export function Sidebar() {
   const playlists = usePlaylists();
+  const jamCode = useJam((s) => s.room?.code ?? (s.session ? '…' : null));
   return (
     <nav className="flex w-60 shrink-0 flex-col gap-1 overflow-hidden rounded-[24px] bg-glass p-3" aria-label="Main">
       <div className="drag-area sidebar-brand mb-3 flex items-center gap-2.5 px-2 pt-1">
@@ -20,6 +23,10 @@ export function Sidebar() {
       <NavLink to="/" end className={link}><Home className="size-5" />Home</NavLink>
       <NavLink to="/search" className={link}><Search className="size-5" />Search</NavLink>
       <NavLink to="/library" end className={link}><Library className="size-5" />Library</NavLink>
+      <button onClick={openJam} className={cn(link({ isActive: false }), jamCode && 'bg-seed/20 text-text')}>
+        <AudioWaveform className="size-5" />Jam
+        {jamCode && <span className="ml-auto rounded-full bg-seed px-2 py-0.5 font-display text-xs font-bold tracking-wider text-white">{jamCode}</span>}
+      </button>
 
       <div className="mt-5 mb-1 flex items-center justify-between px-3">
         <span className="text-sm font-semibold text-text-faint">Your music</span>
