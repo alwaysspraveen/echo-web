@@ -99,7 +99,7 @@ const resolved = new Map<string, { at: number; value: AddonStream | null }>();
 export async function resolveExtension(base: string, title: string, artist: string, durationSec?: number): Promise<AddonStream | null> {
   const key = `${base}|${title}|${artist}|${durationSec ?? ''}`;
   const hit = resolved.get(key);
-  if (hit && Date.now() - hit.at < 30 * 60_000) return hit.value;
+  if (hit && Date.now() - hit.at < 5 * 60_000) return hit.value; // extension links expire
   const primaryArtist = artist.split(/[,&•;/]/)[0]?.trim() || artist;
   const q1 = `${cleanTitle(title)} ${primaryArtist}`.trim();
   const q2 = `${title} ${artist}`.trim();

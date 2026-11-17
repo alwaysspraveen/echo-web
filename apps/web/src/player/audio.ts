@@ -46,6 +46,12 @@ export function fadeOutCurrent(ms: number) {
   cancelFadeOut = ramp(1, 0, ms, (g) => { fader.volume = startVol * g; }, () => { fader.pause(); fader.removeAttribute('src'); fader.load(); cancelFadeOut = null; });
 }
 
+// Seeks the app makes itself (e.g. resuming at the same spot after switching source) are not user
+// seeks; Listen Together checks this so it doesn't broadcast them to the room.
+let internalSeekAt = 0;
+export function markInternalSeek() { internalSeekAt = performance.now(); }
+export const isInternalSeek = () => performance.now() - internalSeekAt < 1500;
+
 export function seek(seconds: number) {
   if (!audio || !Number.isFinite(seconds)) return;
   const max = Number.isFinite(audio.duration) ? audio.duration : seconds;
