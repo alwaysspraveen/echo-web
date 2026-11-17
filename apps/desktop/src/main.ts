@@ -3,7 +3,7 @@
 // The web app and its API are served through a private "app://echo" scheme handled in-process
 // by the same Hono app the local server uses. Nothing listens on a network port, and the origin
 // stays the same across launches, so the library in IndexedDB/localStorage persists.
-import { app, BrowserWindow, Menu, MenuItem, protocol, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, MenuItem, protocol, session, shell } from 'electron';
 import { checkForUpdates, startUpdateChecks } from './updater.js';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -56,7 +56,7 @@ function createWindow() {
     autoHideMenuBar: true,
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 22, y: 26 } } : {}),
     show: false,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false },
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false, preload: path.join(import.meta.dirname, 'preload.cjs') },
   });
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   mainWindow.loadURL(`${ORIGIN}/`);
@@ -108,6 +108,8 @@ if (!app.requestSingleInstanceLock()) {
 
     createWindow();
     startUpdateChecks();
+    ipcMain.handle('echo:version', () => app.getVersion());
+    ipcMain.handle('echo:check-updates', () => checkForUpdates(true));
     // "Check for Updates…" in the app menu (macOS) / Help menu.
     const menu = Menu.getApplicationMenu();
     const updateItem = { label: 'Check for Updates…', click: () => checkForUpdates(true) };

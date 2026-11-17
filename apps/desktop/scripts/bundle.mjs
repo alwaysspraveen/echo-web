@@ -16,3 +16,5 @@ const common = {
 
 await build({ ...common, entryPoints: [`${root}src/main.ts`], outfile: `${root}dist/main.js`, external: ['electron', './server.js'] });
 await build({ ...common, entryPoints: [`${root}../server/src/app.ts`], outfile: `${root}dist/server.js` });
+// Sandboxed preloads must be CommonJS.
+await build({ entryPoints: [`${root}src/preload.ts`], outfile: `${root}dist/preload.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['electron'], logLevel: 'info' });
