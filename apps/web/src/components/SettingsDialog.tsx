@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { DOWNLOAD_OPTIONS, QUALITY_OPTIONS, useSettings } from '@/lib/settings';
@@ -69,6 +69,8 @@ export function SettingsDialog() {
           <p className="mb-3 text-sm text-text-muted">Changing it mid-song continues from the same spot.</p>
           <Choice label="Streaming quality" value={s.quality} options={QUALITY_OPTIONS} onChange={s.setQuality} />
         </section>
+
+        <AppUpdates />
 
         <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Canvas</h3>
@@ -207,5 +209,35 @@ function ExtensionsField() {
         </label>
       )}
     </div>
+  );
+}
+
+declare global {
+  interface Window { echoDesktop?: { version: () => Promise<string>; checkForUpdates: () => Promise<void> } }
+}
+
+/** Desktop app only: current version and a "Check for updates" button. */
+function AppUpdates() {
+  const [version, setVersion] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  useEffect(() => { window.echoDesktop?.version().then(setVersion).catch(() => {}); }, []);
+  if (!window.echoDesktop) return null;
+  const check = async () => {
+    setChecking(true);
+    try { await window.echoDesktop!.checkForUpdates(); } finally { setChecking(false); }
+  };
+  return (
+    <section className="mt-2">
+      <h3 className="mb-1 font-display text-lg font-bold">App updates</h3>
+      <div className="flex items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
+        <span>
+          <span className="block font-semibold">Echo Music {version ?? ''}</span>
+          <span className="block text-sm text-text-muted">Updates are checked automatically when Echo opens and every 6 hours.</span>
+        </span>
+        <button onClick={check} disabled={checking} className="shrink-0 rounded-full bg-seed px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60">
+          {checking ? 'Checking…' : 'Check for updates'}
+        </button>
+      </div>
+    </section>
   );
 }
