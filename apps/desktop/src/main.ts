@@ -3,7 +3,8 @@
 // The web app and its API are served through a private "app://echo" scheme handled in-process
 // by the same Hono app the local server uses. Nothing listens on a network port, and the origin
 // stays the same across launches, so the library in IndexedDB/localStorage persists.
-import { app, BrowserWindow, protocol, session, shell } from 'electron';
+import { app, BrowserWindow, Menu, MenuItem, protocol, session, shell } from 'electron';
+import { checkForUpdates, startUpdateChecks } from './updater.js';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -106,6 +107,15 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionCheckHandler((_wc, perm) => allowed.has(perm));
 
     createWindow();
+    startUpdateChecks();
+    // "Check for Updates…" in the app menu (macOS) / Help menu.
+    const menu = Menu.getApplicationMenu();
+    const updateItem = { label: 'Check for Updates…', click: () => checkForUpdates(true) };
+    if (menu) {
+      const target = process.platform === 'darwin' ? menu.items[0]?.submenu : menu.items.find((m) => m.role === 'help')?.submenu;
+      target?.insert(1, new MenuItem(updateItem));
+      Menu.setApplicationMenu(menu);
+    }
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   });
 
