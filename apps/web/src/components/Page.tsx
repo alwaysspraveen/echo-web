@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Play, Shuffle } from 'lucide-react';
+import { HardDriveDownload, Play, Shuffle } from 'lucide-react';
+import { saveAllOffline } from '@/lib/offline';
 import type { Track } from '@echo/shared';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,8 +47,8 @@ export function CollectionSkeleton() {
 
 /** Header for albums and playlists: artwork, big title, play + shuffle. */
 export function CollectionHeader({
-  thumbnail, kind, title, subtitle, tracks, actions,
-}: { thumbnail?: string; kind: string; title: string; subtitle?: ReactNode; tracks: Track[]; actions?: ReactNode }) {
+  thumbnail, kind, title, subtitle, tracks, actions, downloadable = true,
+}: { thumbnail?: string; kind: string; title: string; subtitle?: ReactNode; tracks: Track[]; actions?: ReactNode; downloadable?: boolean }) {
   const { playList } = usePlayer();
   const shuffle = () => {
     const s = usePlayer.getState();
@@ -67,6 +68,9 @@ export function CollectionHeader({
       <div className="mt-6 flex items-center gap-2">
         <Button size="lg" onClick={() => playList(tracks)} disabled={!tracks.length}><Play className="fill-current" />Play</Button>
         <Button size="lg" variant="secondary" onClick={shuffle} disabled={tracks.length < 2}><Shuffle />Shuffle</Button>
+        {downloadable && tracks.length > 0 && (
+          <Button size="lg" variant="ghost" onClick={() => saveAllOffline(tracks, title)} title="Save every song for offline play"><HardDriveDownload />Download</Button>
+        )}
         {actions}
       </div>
     </div>

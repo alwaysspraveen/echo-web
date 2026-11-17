@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { Track } from '@echo/shared';
+import type { Lyrics, Track } from '@echo/shared';
 
 export interface LikedTrack extends Track {
   likedAt: number;
@@ -15,13 +15,26 @@ export interface LocalPlaylist {
   tracks: Track[];
 }
 
+/** A song saved for offline playback: audio, artwork and lyrics stored in IndexedDB. */
+export interface OfflineTrack {
+  id: string;
+  track: Track;
+  audio: Blob;
+  size: number;
+  art?: Blob;
+  lyrics?: Lyrics | null;
+  savedAt: number;
+}
+
 class EchoDB extends Dexie {
   liked!: EntityTable<LikedTrack, 'id'>;
   history!: EntityTable<HistoryEntry, 'id'>;
   playlists!: EntityTable<LocalPlaylist, 'id'>;
+  offline!: EntityTable<OfflineTrack, 'id'>;
   constructor() {
     super('echo-web');
     this.version(1).stores({ liked: 'id, likedAt', history: 'id, playedAt', playlists: 'id, createdAt' });
+    this.version(2).stores({ offline: 'id, savedAt' });
   }
 }
 

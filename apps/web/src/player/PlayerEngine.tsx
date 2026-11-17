@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { fetchRadio, streamUrl } from '@/lib/api';
 import { recordPlay, toggleLike } from '@/lib/db';
 import { useSettings } from '@/lib/settings';
+import { getOfflineAudio } from '@/lib/offline';
 import { audio, seek } from './audio';
 import { useCurrentTrack, usePlayer } from './store';
 
@@ -27,6 +28,8 @@ export function PlayerEngine() {
   const switching = useRef(false);
   const loadedQuality = useRef<string | null>(null);
   const quality = useSettings((s) => s.quality);
+  // Object URL of a downloaded song's audio while it is the current source (null when streaming).
+  const offlineUrl = useRef<string | null>(null);
 
   // Load a new source when the current track changes.
   useEffect(() => {
@@ -39,14 +42,19 @@ export function PlayerEngine() {
     }
     if (loadedId.current === track.id) return;
     const restoring = loadedId.current === null && !usePlayer.getState().playing; // page reload
-    loadedId.current = track.id;
-    switching.current = true;
-    loadedQuality.current = useSettings.getState().quality;
-    audio.src = streamUrl(track.id, loadedQuality.current);
-    if (!restoring) {
-      audio.play().catch(() => {});
-      recordPlay(track);
-    }
+    const id = track.id;
+    loadedId.current = id;
+    if (!restoring) recordPlay(track);
+    // Downloaded songs play from the stored file (works with no network); others stream.
+    getOfflineAudio(id).catch(() => undefined).then((blob) => {
+      if (loadedId.current !== id) return; // user already moved on
+      if (offlineUrl.current) { URL.revokeObjectURL(offlineUrl.current); offlineUrl.current = null; }
+      switching.current = true;
+      loadedQuality.current = useSettings.getState().quality;
+      if (blob) audio.src = offlineUrl.current = URL.createObjectURL(blob);
+      else audio.src = streamUrl(id, loadedQuality.current);
+      if (!restoring || usePlayer.getState().playing) audio.play().catch(() => {});
+    });
     document.title = `${track.title} · ${artistLine(track.artists)}`;
   }, [track]);
 
@@ -54,6 +62,7 @@ export function PlayerEngine() {
   useEffect(() => {
     if (!track || loadedId.current !== track.id || loadedQuality.current === quality) return;
     loadedQuality.current = quality;
+    if (offlineUrl.current) return; // playing the downloaded file; quality doesn't apply
     const at = audio.currentTime;
     const wasPlaying = !audio.paused;
     switching.current = true;
