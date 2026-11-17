@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { AlbumPage, ArtistPage, Lyrics, PlaylistPage, SearchResults, Shelf, Track } from '@echo/shared';
+import type { AlbumPage, ArtistPage, Lyrics, PlaylistPage, SearchResults, Shelf, Suggestions, Track } from '@echo/shared';
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -43,7 +43,7 @@ export const useSearch = (q: string) =>
 export const useSuggestions = (q: string) =>
   useQuery({
     queryKey: ['suggest', q],
-    queryFn: ({ signal }) => get<string[]>(`/suggest?q=${encodeURIComponent(q)}`, signal),
+    queryFn: ({ signal }) => get<Suggestions>(`/suggest?q=${encodeURIComponent(q)}`, signal),
     enabled: q.length > 1,
     staleTime: 10 * 60_000,
     placeholderData: (prev) => prev,
