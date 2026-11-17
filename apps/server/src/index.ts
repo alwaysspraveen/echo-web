@@ -81,7 +81,8 @@ api.get('/art', async (c) => {
 api.get('/download/:id', async (c) => {
   const id = c.req.param('id');
   if (!VIDEO_ID.test(id)) return c.json({ error: 'Bad id' }, 400);
-  const format = c.req.query('format') === 'm4a' ? 'm4a' : 'opus';
+  const f = c.req.query('format');
+  const format = f === 'm4a' || f === 'opus' ? f : 'mp3';
   const clip = (v: string | undefined) => v?.slice(0, 300) || undefined;
   return downloadTrack(
     { id, format, title: clip(c.req.query('title')) ?? id, artist: clip(c.req.query('artist')), album: clip(c.req.query('album')), cover: c.req.query('cover') },

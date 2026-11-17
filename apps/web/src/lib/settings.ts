@@ -9,11 +9,12 @@ export const QUALITY_OPTIONS: { id: Quality; name: string; detail: string }[] = 
   { id: 'low', name: 'Data saver', detail: 'Opus, about 70 kbps. Uses roughly half the data.' },
 ];
 
-export type DownloadFormat = 'opus' | 'm4a';
+export type DownloadFormat = 'mp3' | 'opus' | 'm4a';
 
 export const DOWNLOAD_OPTIONS: { id: DownloadFormat; name: string; detail: string }[] = [
-  { id: 'opus', name: 'Best quality (.opus)', detail: 'Opus, about 160 kbps, untouched from YouTube. Plays in VLC, browsers, Android and most players, but not Apple Music.' },
-  { id: 'm4a', name: 'Most compatible (.m4a)', detail: 'AAC, about 128 kbps. Plays everywhere, including Apple Music and QuickTime.' },
+  { id: 'mp3', name: 'MP3, 320 kbps', detail: 'Converted from the best source YouTube has. Plays everywhere: Apple Music, car stereos, phones, DJ software.' },
+  { id: 'opus', name: 'Original (.opus)', detail: 'Opus, about 160 kbps, untouched from YouTube. Plays in VLC, browsers, Android and most players, but not Apple Music.' },
+  { id: 'm4a', name: 'Original (.m4a)', detail: 'AAC, about 128 kbps. Plays everywhere, including Apple Music and QuickTime.' },
 ];
 
 /** 'artwork' follows the playing song's cover; anything else is a preset id from theme.ts. */
@@ -35,13 +36,19 @@ export const useSettings = create<Settings>()(
     (set) => ({
       quality: 'high',
       theme: 'artwork',
-      downloadFormat: 'opus',
+      downloadFormat: 'mp3',
       settingsOpen: false,
       setQuality: (quality) => set({ quality }),
       setTheme: (theme) => set({ theme }),
       setDownloadFormat: (downloadFormat) => set({ downloadFormat }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
     }),
-    { name: 'echo-settings', partialize: ({ quality, theme, downloadFormat }) => ({ quality, theme, downloadFormat }) },
+    {
+      name: 'echo-settings',
+      version: 1,
+      partialize: ({ quality, theme, downloadFormat }) => ({ quality, theme, downloadFormat }),
+      // v0 defaulted downloads to .opus; MP3 320 is the default from v1 on.
+      migrate: (state, version) => (version < 1 ? { ...(state as object), downloadFormat: 'mp3' } : state) as Settings,
+    },
   ),
 );

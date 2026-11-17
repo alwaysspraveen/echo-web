@@ -69,7 +69,7 @@ export function SettingsDialog() {
 
         <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Download format</h3>
-          <p className="mb-3 text-sm text-text-muted">Downloads include the title, artist, album and cover art.</p>
+          <p className="mb-3 text-sm text-text-muted">Every download includes the title, artist, album and cover art.</p>
           <Choice label="Download format" value={s.downloadFormat} options={DOWNLOAD_OPTIONS} onChange={s.setDownloadFormat} />
         </section>
       </DialogContent>

@@ -21,7 +21,7 @@ export const streamUrl = (id: string, quality: string) => `/api/stream/${id}?q=$
 /** Same-origin copy of artwork, so canvas can read its pixels. */
 export const artUrl = (url: string) => `/api/art?url=${encodeURIComponent(url)}`;
 
-export function downloadUrl(track: Track, format: 'opus' | 'm4a') {
+export function downloadUrl(track: Track, format: 'mp3' | 'opus' | 'm4a') {
   const p = new URLSearchParams({ format, title: track.title, artist: track.artists.map((a) => a.name).join(', ') });
   if (track.album?.name) p.set('album', track.album.name);
   if (track.thumbnail) p.set('cover', track.thumbnail);

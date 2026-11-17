@@ -7,8 +7,11 @@ import { allowedArtUrl, fetchArt } from './art.ts';
 
 export interface DownloadRequest {
   id: string;
-  /** 'opus' = best quality (Opus ~160 kbps), 'm4a' = AAC ~128 kbps, plays in Apple Music/QuickTime. */
-  format: 'opus' | 'm4a';
+  /**
+   * 'mp3' = 320 kbps MP3 encoded from the best source (default; plays everywhere),
+   * 'opus' = original Opus ~160 kbps, 'm4a' = original AAC ~128 kbps.
+   */
+  format: 'mp3' | 'opus' | 'm4a';
   title: string;
   artist?: string;
   album?: string;
@@ -44,9 +47,10 @@ function runFfmpeg(args: string[], signal: AbortSignal): Promise<void> {
 export async function downloadTrack(req: DownloadRequest, signal: AbortSignal): Promise<Response> {
   const quality: Quality = req.format === 'm4a' ? 'normal' : 'high';
   const { bytes, mime } = await fetchWholeAudio(req.id, quality, signal);
-  // The preferred format can be missing for a song; name the file after what we actually got.
+  // The preferred source can be missing for a song; name copies after what we actually got.
   const isMp4 = mime.includes('mp4');
-  const ext = isMp4 ? 'm4a' : 'opus';
+  const mp3 = req.format === 'mp3';
+  const ext = mp3 ? 'mp3' : isMp4 ? 'm4a' : 'opus';
 
   const coverUrl = allowedArtUrl(req.cover);
   const cover = coverUrl ? await fetchArt(coverUrl, signal).catch(() => null) : null;
@@ -61,7 +65,18 @@ export async function downloadTrack(req: DownloadRequest, signal: AbortSignal): 
 
     let out: Buffer;
     try {
-      if (isMp4) {
+      if (mp3) {
+        // 320 kbps CBR at 44.1 kHz with ID3v2.3 tags: the most widely playable MP3 there is.
+        const coverArgs: string[] = [];
+        if (cover) {
+          const coverPath = join(dir, 'cover.img');
+          await writeFile(coverPath, Buffer.from(cover.bytes));
+          coverArgs.push('-i', coverPath, '-map', '1', '-c:v', 'mjpeg', '-disposition:v', 'attached_pic',
+            '-metadata:s:v', 'title=Album cover', '-metadata:s:v', 'comment=Cover (front)');
+        }
+        await runFfmpeg(['-i', input, ...coverArgs, '-map', '0:a', '-c:a', 'libmp3lame', '-b:a', '320k', '-ar', '44100',
+          '-id3v2_version', '3', ...tags, output], signal);
+      } else if (isMp4) {
         const coverArgs: string[] = [];
         if (cover) {
           const coverPath = join(dir, cover.type.includes('png') ? 'cover.png' : 'cover.jpg');
@@ -76,6 +91,7 @@ export async function downloadTrack(req: DownloadRequest, signal: AbortSignal): 
       out = await readFile(output);
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+      if (mp3) return Response.json({ error: 'MP3 downloads need ffmpeg installed (brew install ffmpeg).' }, { status: 501 });
       out = bytes; // ffmpeg not installed: hand over the original stream untagged
     }
 
@@ -83,7 +99,7 @@ export async function downloadTrack(req: DownloadRequest, signal: AbortSignal): 
     const ascii = name.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, "'");
     return new Response(new Uint8Array(out), {
       headers: {
-        'Content-Type': isMp4 ? 'audio/mp4' : out === bytes ? 'audio/webm' : 'audio/ogg',
+        'Content-Type': mp3 ? 'audio/mpeg' : isMp4 ? 'audio/mp4' : out === bytes ? 'audio/webm' : 'audio/ogg',
         'Content-Length': String(out.length),
         'Content-Disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`,
         'Cache-Control': 'no-store',
