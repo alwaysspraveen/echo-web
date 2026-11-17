@@ -36,8 +36,16 @@ The server then also serves the built app on http://127.0.0.1:8787. Later, this 
 ```sh
 cd apps/desktop
 npm run dist:mac    # → release/Echo-Music-<version>-arm64.dmg (Apple Silicon)
-npm run dist:win    # → release/Echo-Music-Setup-<version>.exe (not built or tested yet)
+npm run dist:win    # → release/Echo-Music-Setup-<version>.exe (64-bit Windows)
 ```
+
+Or build the Windows installer in one step, from macOS, Linux or Git Bash on Windows (no Wine needed):
+
+```sh
+./scripts/build-windows.sh
+```
+
+The Windows installer is unsigned, so on first run Windows shows *"Windows protected your PC"*: click **More info → Run anyway**.
 
 Builds are ad-hoc signed, not notarized. A copy built on this Mac opens normally. A copy downloaded on another Mac needs right-click → **Open** the first time.
 

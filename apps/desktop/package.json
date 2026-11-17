@@ -38,13 +38,6 @@
         "to": "web"
       },
       {
-        "from": "vendor/${platform}-${arch}",
-        "to": "bin",
-        "filter": [
-          "ffmpeg*"
-        ]
-      },
-      {
         "from": "build/icon.png",
         "to": "icon.png"
       }
@@ -59,7 +52,16 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "extraResources": [
+        {
+          "from": "vendor/win32-x64",
+          "to": "bin",
+          "filter": [
+            "ffmpeg.exe"
+          ]
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -81,7 +83,16 @@
       "icon": "build/icon-mac.png",
       "category": "public.app-category.music",
       "identity": "-",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "extraResources": [
+        {
+          "from": "vendor/darwin-arm64",
+          "to": "bin",
+          "filter": [
+            "ffmpeg"
+          ]
+        }
+      ]
     },
     "dmg": {
       "artifactName": "Echo-Music-${version}-${arch}.dmg"
