@@ -4,6 +4,8 @@ import { useCurrentTrack, useUi } from '@/player/store';
 import { Button } from '@/components/ui/button';
 import { Artwork } from './Artwork';
 import { VideoStage } from './VideoStage';
+import { CanvasArt } from './CanvasArt';
+import { useSettings } from '@/lib/settings';
 import { cn } from '@/lib/utils';
 import { LyricsView } from './LyricsView';
 import { ArtistLinks } from './TrackList';
@@ -17,6 +19,7 @@ export function NowPlaying() {
   const close = () => useUi.getState().setNowPlaying(false);
   const track = useCurrentTrack();
   const videoMode = useUi((s) => s.videoMode);
+  const canvasOn = useSettings((s) => s.canvas);
 
   useEffect(() => {
     if (!open) return;
@@ -66,11 +69,10 @@ export function NowPlaying() {
                 style={{ width: 'min(100cqw, calc(100cqh * 16 / 9), 960px)' }}
               />
             ) : (
-              <Artwork
-                src={track.thumbnail}
-                className="rounded-[28px] shadow-2xl shadow-black/50"
-                style={{ width: 'min(100cqw, 100cqh, 640px)', height: 'min(100cqw, 100cqh, 640px)' }}
-              />
+              <div className="relative" style={{ width: 'min(100cqw, 100cqh, 640px)', height: 'min(100cqw, 100cqh, 640px)' }}>
+                <Artwork src={track.thumbnail} className="size-full rounded-[28px] shadow-2xl shadow-black/50" />
+                {canvasOn && <CanvasArt track={track} className="inset-0 size-full rounded-[28px]" />}
+              </div>
             )}
           </div>
           <div className="min-w-0">

@@ -6,6 +6,7 @@ import { findLyrics } from './lyrics.ts';
 import { allowedArtUrl, fetchArt } from './art.ts';
 import { downloadTrack } from './download.ts';
 import { manifestName, normalizeBase, resolveExtension } from './extensions.ts';
+import { findCanvas } from './canvas.ts';
 
 const VIDEO_ID = /^[\w-]{11}$/;
 const BROWSE_ID = /^[\w-]{2,80}$/;
@@ -38,6 +39,14 @@ api.get('/extension/resolve', async (c) => {
   if (!base || !title) return c.json({ error: 'Missing base or title' }, 400);
   const stream = await resolveExtension(base, title, artist, Number(c.req.query('duration')) || undefined);
   return stream ? c.json(stream) : c.json({ error: 'Not available on this extension' }, 404);
+});
+
+api.get('/canvas', async (c) => {
+  const title = c.req.query('title')?.slice(0, 300);
+  const artist = c.req.query('artist')?.slice(0, 300) ?? '';
+  if (!title) return c.json({ error: 'Missing title' }, 400);
+  const url = await findCanvas(title, artist);
+  return url ? c.json({ url }) : c.json({ error: 'No canvas for this song' }, 404);
 });
 
 api.get('/search', async (c) => {

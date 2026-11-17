@@ -71,6 +71,17 @@ export function SettingsDialog() {
         </section>
 
         <section className="mt-2">
+          <h3 className="mb-1 font-display text-lg font-bold">Canvas</h3>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
+            <span>
+              <span className="block font-semibold">Show canvas</span>
+              <span className="block text-sm text-text-muted">Animated album artwork in Now Playing, when the album has one.</span>
+            </span>
+            <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={s.canvas} onChange={(e) => s.setCanvas(e.target.checked)} />
+          </label>
+        </section>
+
+        <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Echo Brain (Beta)</h3>
           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
             <span>

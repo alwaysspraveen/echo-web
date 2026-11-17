@@ -55,6 +55,15 @@ Click **Jam** in the sidebar or the player bar. **Start a Jam** gives you a room
 
 Each person's Echo streams and plays the music itself. The Jam server (`apps/jam`, deployed on Vercel with Upstash Redis) only coordinates who's in the room, the shared queue and playback position. It never carries audio. Rooms expire 12 hours after the last change. To self-host it, deploy `apps/jam` to Vercel, add the Upstash for Redis integration, and set the server URL in **Settings → Jam server**.
 
+## Features ported from Echo for Android
+
+- **Explore**: Charts, Moods & genres, Podcasts (sidebar → Explore).
+- **Crossfade**: Settings → Crossfade (off by default, 1–12 s).
+- **Video mode**: Song / Video switch at the top of Now Playing.
+- **Extensions (320 kbps / lossless)**: Settings → Extensions. Add an Echo extension server (e.g. the 320kbs-extension or lossless-extension). Songs are matched with the same strict rules as Android; anything it doesn't have plays from YouTube Music.
+- **Echo Brain (beta)**: Settings → Echo Brain. Records listening time and skips, scores songs like Android's LocalTasteEngine, and adds picks (marked *Echo Brain*) as your queue runs out.
+- **Canvas**: Apple Music motion artwork in Now Playing when the album has one (Settings → Canvas).
+
 ## Settings
 
 Open **Settings** at the bottom of the sidebar.
