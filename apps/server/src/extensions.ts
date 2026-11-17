@@ -86,7 +86,11 @@ const getJson = async <T>(url: string, ms = 8000): Promise<T | null> => {
 };
 
 export async function manifestName(base: string): Promise<string | null> {
-  return (await getJson<{ name?: string }>(`${base}/manifest.json`))?.name || null;
+  const name = (await getJson<{ name?: string }>(`${base}/manifest.json`))?.name;
+  if (name) return name;
+  // No manifest (e.g. the 320 kbps JioSaavn extension): accept it if /search answers like an extension.
+  const probe = await getJson<{ tracks?: unknown }>(`${base}/search?q=hello`, 12000);
+  return Array.isArray(probe?.tracks) ? new URL(base).hostname.split('.')[0] : null;
 }
 
 const resolved = new Map<string, { at: number; value: AddonStream | null }>();

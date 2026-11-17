@@ -4,7 +4,7 @@ import { fetchRadio, resolveExtensionStream, streamUrl } from '@/lib/api';
 import { useNowSource } from './source';
 import { COMPLETION_RATIO, recommend, recordListen, useBrainAdded } from '@/lib/brain';
 import { recordPlay, toggleLike } from '@/lib/db';
-import { useSettings } from '@/lib/settings';
+import { DEFAULT_EXTENSIONS, useSettings } from '@/lib/settings';
 import { getOfflineAudio } from '@/lib/offline';
 import { useLt } from '@/lib/listenTogether';
 import { audio, fadeIn, fadeOutCurrent, resetFade, seek, setBaseVolume } from './audio';
@@ -51,22 +51,29 @@ export function PlayerEngine() {
     // Downloaded songs play from the stored file (works with no network); others stream.
     getOfflineAudio(id).catch(() => undefined).then(async (blob) => {
       if (loadedId.current !== id) return; // user already moved on
-      // Extensions (Settings → Extensions): if one has this song in higher quality, play that instead.
+      useNowSource.setState({ label: blob ? 'Downloaded' : null });
+      // Extensions (Settings → Extensions): start right away from YouTube, and when an extension has
+      // this song in higher quality, switch to it at the same position (seamless upgrade).
       const { extensions, preferExtension, quality } = useSettings.getState();
-      const bases = extensions.filter((e) => e.enabled).map((e) => e.base);
-      let ext: Awaited<ReturnType<typeof resolveExtensionStream>> = null;
+      // Always FLAC lossless first, then 320 kbps, then any others; YouTube if none has the song.
+      const rank = (b: string) => { const i = DEFAULT_EXTENSIONS.findIndex((d) => d.base === b); return i === -1 ? DEFAULT_EXTENSIONS.length : i; };
+      const bases = extensions.filter((e) => e.enabled).map((e) => e.base).sort((x, y) => rank(x) - rank(y));
       if (!blob && preferExtension && bases.length && quality !== 'low') {
-        useNowSource.setState({ label: 'Checking extensions…' });
-        ext = await resolveExtensionStream(track, bases).catch(() => null);
-        if (loadedId.current !== id) return;
+        resolveExtensionStream(track, bases).catch(() => null).then((ext) => {
+          if (!ext || loadedId.current !== id) return;
+          const at = audio.currentTime;
+          const wasPlaying = !audio.paused || usePlayer.getState().playing;
+          switching.current = true;
+          audio.src = ext.url;
+          audio.addEventListener('loadedmetadata', () => { audio.currentTime = at; if (wasPlaying) audio.play().catch(() => {}); }, { once: true });
+          useNowSource.setState({ label: [ext.quality || ext.streamQuality || ext.audioQuality, ext.codec || ext.format].filter(Boolean).join(' · ').toUpperCase() || 'EXTENSION' });
+        });
       }
-      useNowSource.setState({ label: blob ? 'Downloaded' : ext ? [ext.audioQuality || ext.quality, ext.codec || ext.format].filter(Boolean).join(' · ').toUpperCase() || 'EXTENSION' : null });
       // Release the previous downloaded file later: a crossfade may still be playing its tail.
       if (offlineUrl.current) { const old = offlineUrl.current; setTimeout(() => URL.revokeObjectURL(old), 20_000); offlineUrl.current = null; }
       switching.current = true;
       loadedQuality.current = useSettings.getState().quality;
       if (blob) audio.src = offlineUrl.current = URL.createObjectURL(blob);
-      else if (ext) audio.src = ext.url;
       else audio.src = streamUrl(id, loadedQuality.current);
       if (!restoring || usePlayer.getState().playing) audio.play().catch(() => {});
     });
