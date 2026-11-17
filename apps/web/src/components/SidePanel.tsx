@@ -5,6 +5,7 @@ import { Artwork } from './Artwork';
 import { LyricsView } from './LyricsView';
 import { ListenTogetherPanel } from './ListenTogether';
 import { useLt } from '@/lib/listenTogether';
+import { useBrainAdded } from '@/lib/brain';
 
 function Queue() {
   const { queue, index, jumpTo, remove, clear } = usePlayer();
@@ -34,7 +35,12 @@ function QueueRow({ track, active, onPlay, onRemove }: { track: ReturnType<typeo
         <Artwork src={track.thumbnail} className="size-11 rounded-lg" />
         <span className="min-w-0">
           <span className={cn('block truncate text-sm font-medium', active && 'text-seed-soft')}>{track.title}</span>
-          <span className="block truncate text-xs text-text-muted">{track.artists.map((a) => a.name).join(', ')}</span>
+          <span className="block truncate text-xs text-text-muted">
+            {useBrainAdded.getState().ids.has(track.id) && (
+              <span className="mr-1.5 rounded bg-seed/20 px-1 text-[10px] font-bold text-seed-soft" title="This song was dynamically added by Echo Brain based on your listening patterns, the current song's genre, and your library's vibes.">ECHO BRAIN</span>
+            )}
+            {track.artists.map((a) => a.name).join(', ')}
+          </span>
         </span>
       </button>
       {onRemove && (

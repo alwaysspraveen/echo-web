@@ -26,15 +26,26 @@ export interface OfflineTrack {
   savedAt: number;
 }
 
+/** Per-song listening stats for Echo Brain (same fields as Android's SongPlayStats). */
+export interface SongStats {
+  id: string;
+  track: Track;
+  totalPlayTimeMs: number;
+  skipCount: number;
+  lastPlayedAt: number;
+}
+
 class EchoDB extends Dexie {
   liked!: EntityTable<LikedTrack, 'id'>;
   history!: EntityTable<HistoryEntry, 'id'>;
   playlists!: EntityTable<LocalPlaylist, 'id'>;
   offline!: EntityTable<OfflineTrack, 'id'>;
+  stats!: EntityTable<SongStats, 'id'>;
   constructor() {
     super('echo-web');
     this.version(1).stores({ liked: 'id, likedAt', history: 'id, playedAt', playlists: 'id, createdAt' });
     this.version(2).stores({ offline: 'id, savedAt' });
+    this.version(3).stores({ stats: 'id, lastPlayedAt' });
   }
 }
 
