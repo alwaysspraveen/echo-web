@@ -33,7 +33,9 @@ export function NowPlaying() {
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/30 to-black/80" />
 
-      <div className="relative grid h-full grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-12 px-12 pt-6">
+      {/* On macOS desktop the window buttons sit top-left; .np-stage moves content below them. */}
+      <div className="drag-area absolute inset-x-0 top-0 h-14" aria-hidden />
+      <div className="np-stage relative grid h-full grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-12 px-12 pt-6">
         {/* Rows: close button / artwork (takes what's left) / title. The text never shrinks. */}
         <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] pb-8">
           <Button variant="ghost" size="icon-lg" onClick={close} aria-label="Close now playing" className="-ml-2 text-white hover:bg-white/10">
