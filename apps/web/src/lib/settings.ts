@@ -19,6 +19,12 @@ export const DOWNLOAD_OPTIONS: { id: DownloadFormat; name: string; detail: strin
 
 export interface Extension { base: string; name: string; enabled: boolean }
 
+/** Built in for Mac and Windows: lossless (FLAC) first, then 320 kbps, then YouTube Music. */
+export const DEFAULT_EXTENSIONS: Extension[] = [
+  { base: 'https://lossless-extension-eight-sepia.vercel.app', name: 'Lossless (FLAC)', enabled: true },
+  { base: 'https://echo-320-extension.vercel.app', name: '320 kbps', enabled: true },
+];
+
 /** 'artwork' follows the playing song's cover; anything else is a preset id from theme.ts. */
 export type ThemeChoice = 'artwork' | string;
 
@@ -53,7 +59,7 @@ export const useSettings = create<Settings>()(
       downloadFormat: 'mp3',
       crossfade: false,
       crossfadeSeconds: 5,
-      extensions: [],
+      extensions: DEFAULT_EXTENSIONS,
       preferExtension: true,
       echoBrain: false,
       canvas: true,
@@ -71,10 +77,19 @@ export const useSettings = create<Settings>()(
     }),
     {
       name: 'echo-settings',
-      version: 1,
+      version: 2,
       partialize: ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds, extensions, preferExtension, echoBrain, canvas }) => ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds, extensions, preferExtension, echoBrain, canvas }),
       // v0 defaulted downloads to .opus; MP3 320 is the default from v1 on.
-      migrate: (state, version) => (version < 1 ? { ...(state as object), downloadFormat: 'mp3' } : state) as Settings,
+      migrate: (state, version) => {
+        let s = { ...(state as Settings) };
+        if (version < 1) s = { ...s, downloadFormat: 'mp3' };
+        if (version < 2) {
+          // Add the built-in extensions (keep any the user already added).
+          const have = new Set((s.extensions ?? []).map((e) => e.base));
+          s = { ...s, extensions: [...DEFAULT_EXTENSIONS.filter((e) => !have.has(e.base)), ...(s.extensions ?? [])], preferExtension: s.preferExtension ?? true };
+        }
+        return s;
+      },
     },
   ),
 );
