@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
-  Heart, ListMusic, Loader2, MicVocal, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX,
+  Download, Heart, ListMusic, Loader2, MicVocal, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toggleLike, useIsLiked } from '@/lib/db';
+import { downloadTrack } from '@/lib/download';
 import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/player/audio';
 import { useCurrentTrack, usePlayer, useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
@@ -122,6 +123,9 @@ export function PlayerBar() {
 
       {/* Extras */}
       <div className="flex items-center justify-end gap-1">
+        <IconButton label="Download" onClick={() => track && downloadTrack(track)} disabled={!track}>
+          <Download className="size-[18px]" />
+        </IconButton>
         <IconButton label="Lyrics" active={panel === 'lyrics'} onClick={() => togglePanel('lyrics')}>
           <MicVocal className="size-[18px]" />
         </IconButton>

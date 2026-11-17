@@ -4,8 +4,10 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { getAlbum, getArtist, getHome, getPlaylist, getRadio, search, suggest } from './yt.ts';
-import { streamAudio } from './stream.ts';
+import { QUALITIES, streamAudio, type Quality } from './stream.ts';
 import { findLyrics } from './lyrics.ts';
+import { allowedArtUrl, fetchArt } from './art.ts';
+import { downloadTrack } from './download.ts';
 
 const VIDEO_ID = /^[\w-]{11}$/;
 const BROWSE_ID = /^[\w-]{2,80}$/;
@@ -62,7 +64,29 @@ api.get('/lyrics', async (c) => {
 api.get('/stream/:id', async (c) => {
   const id = c.req.param('id');
   if (!VIDEO_ID.test(id)) return c.json({ error: 'Bad id' }, 400);
-  return streamAudio(id, c.req.header('range'), c.req.raw.signal);
+  const q = c.req.query('q') ?? 'high';
+  const quality: Quality = (QUALITIES as string[]).includes(q) ? (q as Quality) : 'high';
+  return streamAudio(id, quality, c.req.header('range'), c.req.raw.signal);
+});
+
+// Same-origin copy of an artwork image so the web app can read its pixels ("Match artwork" theme).
+api.get('/art', async (c) => {
+  const url = allowedArtUrl(c.req.query('url'));
+  if (!url) return c.json({ error: 'Host not allowed' }, 400);
+  const art = await fetchArt(url, c.req.raw.signal);
+  if (!art) return c.json({ error: 'Not an image' }, 502);
+  return c.body(art.bytes, 200, { 'Content-Type': art.type, 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+});
+
+api.get('/download/:id', async (c) => {
+  const id = c.req.param('id');
+  if (!VIDEO_ID.test(id)) return c.json({ error: 'Bad id' }, 400);
+  const format = c.req.query('format') === 'm4a' ? 'm4a' : 'opus';
+  const clip = (v: string | undefined) => v?.slice(0, 300) || undefined;
+  return downloadTrack(
+    { id, format, title: clip(c.req.query('title')) ?? id, artist: clip(c.req.query('artist')), album: clip(c.req.query('album')), cover: c.req.query('cover') },
+    c.req.raw.signal,
+  );
 });
 
 api.onError((err, c) => {

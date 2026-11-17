@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { fetchRadio, streamUrl } from '@/lib/api';
 import { recordPlay, toggleLike } from '@/lib/db';
+import { useSettings } from '@/lib/settings';
 import { audio, seek } from './audio';
 import { useCurrentTrack, usePlayer } from './store';
 
@@ -24,6 +25,8 @@ export function PlayerEngine() {
   const errorStreak = useRef(0);
   // Assigning a new src fires a 'pause' event on a playing element; it isn't a user pause.
   const switching = useRef(false);
+  const loadedQuality = useRef<string | null>(null);
+  const quality = useSettings((s) => s.quality);
 
   // Load a new source when the current track changes.
   useEffect(() => {
@@ -38,13 +41,25 @@ export function PlayerEngine() {
     const restoring = loadedId.current === null && !usePlayer.getState().playing; // page reload
     loadedId.current = track.id;
     switching.current = true;
-    audio.src = streamUrl(track.id);
+    loadedQuality.current = useSettings.getState().quality;
+    audio.src = streamUrl(track.id, loadedQuality.current);
     if (!restoring) {
       audio.play().catch(() => {});
       recordPlay(track);
     }
     document.title = `${track.title} · ${artistLine(track.artists)}`;
   }, [track]);
+
+  // Quality changed mid-song: reload the stream at the same position.
+  useEffect(() => {
+    if (!track || loadedId.current !== track.id || loadedQuality.current === quality) return;
+    loadedQuality.current = quality;
+    const at = audio.currentTime;
+    const wasPlaying = !audio.paused;
+    switching.current = true;
+    audio.src = streamUrl(track.id, quality);
+    audio.addEventListener('loadedmetadata', () => { audio.currentTime = at; if (wasPlaying) audio.play().catch(() => {}); }, { once: true });
+  }, [quality, track]);
 
   // Play / pause.
   useEffect(() => {

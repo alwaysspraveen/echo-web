@@ -27,6 +27,16 @@ npm start -w apps/server
 
 The server then also serves the built app on http://127.0.0.1:8787. Later, this is the process an Electron shell would launch.
 
+## Settings
+
+Open **Settings** at the bottom of the sidebar.
+
+- **Theme:** *Match artwork* (the default) takes its colors from the cover of the song that's playing, like the Android app's dynamic color. You can also pick one of 8 fixed colors.
+- **Streaming quality:** High (Opus ~160 kbps), Normal (AAC ~128 kbps) or Data saver (Opus ~70 kbps). Changing it mid-song keeps your position.
+- **Download format:** Best quality `.opus` (~160 kbps), or `.m4a` (AAC ~128 kbps) for Apple Music and QuickTime. Downloads are saved to your browser's Downloads folder, tagged with title, artist, album and cover art. The audio is copied without re-encoding, so no quality is lost. Tagging needs `ffmpeg` on the PATH; without it you get the untagged original file.
+
+Download a song from its right-click menu, the download button in the player bar, or the Now Playing view. There's no 320 kbps option because YouTube Music only serves that to Premium accounts.
+
 ## Keyboard shortcuts
 
 | Key | Action |
@@ -59,5 +69,5 @@ Design notes: `docs/superpowers/specs/2026-11-17-echo-web-design.md`.
 
 ## Known limits
 
-- No YouTube account sign-in, downloads or offline playback yet.
+- No YouTube account sign-in, and no offline playback inside the app yet (downloads are saved as files).
 - If YouTube changes its streaming rules, `VISIONOS` may stop serving full files. The server falls back to other clients, which may give only a ~1 MB preview. Updating `youtubei.js` is the usual fix.

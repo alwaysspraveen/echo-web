@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { Disc3, Heart, HeartOff, ListEnd, ListPlus, ListStart, Plus, Radio, Trash2, UserRound } from 'lucide-react';
+import { Disc3, Download, Heart, HeartOff, ListEnd, ListPlus, ListStart, Plus, Radio, Trash2, UserRound } from 'lucide-react';
 import type { Track } from '@echo/shared';
 import {
   ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger,
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { addToPlaylist, toggleLike, useIsLiked, usePlaylists } from '@/lib/db';
 import { fetchRadio } from '@/lib/api';
+import { downloadTrack } from '@/lib/download';
 import { usePlayer } from '@/player/store';
 import { openNewPlaylist } from './NewPlaylistDialog';
 
@@ -77,6 +78,7 @@ export function TrackMenuItems({ track, kind, onRemove }: TrackMenuProps) {
           {playlists.map((p) => <M.Item key={p.id} onSelect={() => add(p.id, p.name)}>{p.name}</M.Item>)}
         </M.SubContent>
       </M.Sub>
+      <M.Item onSelect={() => downloadTrack(track)}><Download />Download</M.Item>
       {onRemove && <M.Item variant="destructive" onSelect={onRemove}><Trash2 />Remove from this playlist</M.Item>}
       {(artist || track.album?.id) && <M.Separator />}
       {artist?.id && <M.Item onSelect={() => navigate(`/artist/${artist.id}`)}><UserRound />Go to artist</M.Item>}

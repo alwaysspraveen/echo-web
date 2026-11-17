@@ -16,7 +16,17 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   return res.json();
 }
 
-export const streamUrl = (id: string) => `/api/stream/${id}`;
+export const streamUrl = (id: string, quality: string) => `/api/stream/${id}?q=${quality}`;
+
+/** Same-origin copy of artwork, so canvas can read its pixels. */
+export const artUrl = (url: string) => `/api/art?url=${encodeURIComponent(url)}`;
+
+export function downloadUrl(track: Track, format: 'opus' | 'm4a') {
+  const p = new URLSearchParams({ format, title: track.title, artist: track.artists.map((a) => a.name).join(', ') });
+  if (track.album?.name) p.set('album', track.album.name);
+  if (track.thumbnail) p.set('cover', track.thumbnail);
+  return `/api/download/${track.id}?${p}`;
+}
 
 export const fetchRadio = (id: string) => get<Track[]>(`/radio/${id}`);
 

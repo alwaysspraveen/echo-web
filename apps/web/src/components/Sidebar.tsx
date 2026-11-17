@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router';
-import { Heart, History, Home, Library, ListMusic, Plus, Search } from 'lucide-react';
+import { Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
+import { useSettings } from '@/lib/settings';
 import { usePlaylists } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import logo from '@/logo.png';
@@ -35,6 +36,9 @@ export function Sidebar() {
           </NavLink>
         ))}
       </div>
+      <button onClick={() => useSettings.getState().setSettingsOpen(true)} className={link({ isActive: false })}>
+        <Settings className="size-5" />Settings
+      </button>
     </nav>
   );
 }
