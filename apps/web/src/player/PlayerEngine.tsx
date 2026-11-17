@@ -5,7 +5,7 @@ import { recordPlay, toggleLike } from '@/lib/db';
 import { useSettings } from '@/lib/settings';
 import { getOfflineAudio } from '@/lib/offline';
 import { useLt } from '@/lib/listenTogether';
-import { audio, seek } from './audio';
+import { audio, fadeIn, fadeOutCurrent, resetFade, seek, setBaseVolume } from './audio';
 import { useCurrentTrack, usePlayer } from './store';
 
 const artistLine = (names: { name: string }[]) => names.map((a) => a.name).join(', ');
@@ -49,7 +49,8 @@ export function PlayerEngine() {
     // Downloaded songs play from the stored file (works with no network); others stream.
     getOfflineAudio(id).catch(() => undefined).then((blob) => {
       if (loadedId.current !== id) return; // user already moved on
-      if (offlineUrl.current) { URL.revokeObjectURL(offlineUrl.current); offlineUrl.current = null; }
+      // Release the previous downloaded file later: a crossfade may still be playing its tail.
+      if (offlineUrl.current) { const old = offlineUrl.current; setTimeout(() => URL.revokeObjectURL(old), 20_000); offlineUrl.current = null; }
       switching.current = true;
       loadedQuality.current = useSettings.getState().quality;
       if (blob) audio.src = offlineUrl.current = URL.createObjectURL(blob);
@@ -82,9 +83,35 @@ export function PlayerEngine() {
   }, [playing, track]);
 
   useEffect(() => {
-    audio.volume = volume * volume; // perceptual curve
+    setBaseVolume(volume * volume); // perceptual curve
     audio.muted = muted;
   }, [volume, muted]);
+
+  // Crossfade (Android: Settings → Crossfade, off by default, 5 s): near the end of a song, keep its
+  // tail playing on a second player while fading it out, and fade the next song in.
+  useEffect(() => {
+    let triggered = false;
+    const onTime = () => {
+      const { crossfade, crossfadeSeconds } = useSettings.getState();
+      const st = usePlayer.getState();
+      if (!crossfade || triggered || !st.playing || !Number.isFinite(audio.duration) || audio.duration < crossfadeSeconds * 2) return;
+      if (audio.duration - audio.currentTime > crossfadeSeconds) return;
+      const hasNext = st.repeat !== 'one' && (st.index + 1 < st.queue.length || st.repeat === 'all');
+      if (!hasNext) return;
+      triggered = true;
+      const ms = crossfadeSeconds * 1000;
+      fadeOutCurrent(ms);
+      st.next(true);
+      const onPlaying = () => fadeIn(ms);
+      audio.addEventListener('playing', onPlaying, { once: true });
+    };
+    const reset = () => { triggered = false; };
+    const onSeek = () => { if (audio.duration - audio.currentTime > useSettings.getState().crossfadeSeconds) { triggered = false; resetFade(); } };
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('loadstart', reset);
+    audio.addEventListener('seeked', onSeek);
+    return () => { audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('loadstart', reset); audio.removeEventListener('seeked', onSeek); };
+  }, []);
 
   // When the last track starts, queue "radio" (similar songs) so music keeps going.
   useEffect(() => {

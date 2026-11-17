@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { AudioWaveform, HardDriveDownload, Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
+import { AudioWaveform, Compass, HardDriveDownload, Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
 import { useSettings } from '@/lib/settings';
 import { useLt } from '@/lib/listenTogether';
 import { openListenTogether } from './ListenTogether';
@@ -22,6 +22,7 @@ export function Sidebar() {
       </div>
       <NavLink to="/" end className={link}><Home className="size-5" />Home</NavLink>
       <NavLink to="/search" className={link}><Search className="size-5" />Search</NavLink>
+      <NavLink to="/explore" className={link}><Compass className="size-5" />Explore</NavLink>
       <NavLink to="/library" end className={link}><Library className="size-5" />Library</NavLink>
       <button onClick={openListenTogether} className={cn(link({ isActive: false }), jamCode && 'bg-seed/20 text-text')}>
         <AudioWaveform className="size-5" />Listen Together

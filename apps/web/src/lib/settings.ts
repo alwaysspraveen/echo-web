@@ -24,10 +24,14 @@ interface Settings {
   quality: Quality;
   theme: ThemeChoice;
   downloadFormat: DownloadFormat;
+  crossfade: boolean;
+  crossfadeSeconds: number;
   settingsOpen: boolean;
   setQuality: (q: Quality) => void;
   setTheme: (t: ThemeChoice) => void;
   setDownloadFormat: (f: DownloadFormat) => void;
+  setCrossfade: (on: boolean) => void;
+  setCrossfadeSeconds: (s: number) => void;
   setSettingsOpen: (open: boolean) => void;
 }
 
@@ -37,16 +41,20 @@ export const useSettings = create<Settings>()(
       quality: 'high',
       theme: 'artwork',
       downloadFormat: 'mp3',
+      crossfade: false,
+      crossfadeSeconds: 5,
       settingsOpen: false,
       setQuality: (quality) => set({ quality }),
       setTheme: (theme) => set({ theme }),
       setDownloadFormat: (downloadFormat) => set({ downloadFormat }),
+      setCrossfade: (crossfade) => set({ crossfade }),
+      setCrossfadeSeconds: (crossfadeSeconds) => set({ crossfadeSeconds }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
     }),
     {
       name: 'echo-settings',
       version: 1,
-      partialize: ({ quality, theme, downloadFormat }) => ({ quality, theme, downloadFormat }),
+      partialize: ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds }) => ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds }),
       // v0 defaulted downloads to .opus; MP3 320 is the default from v1 on.
       migrate: (state, version) => (version < 1 ? { ...(state as object), downloadFormat: 'mp3' } : state) as Settings,
     },

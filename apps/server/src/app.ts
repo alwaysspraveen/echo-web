@@ -1,6 +1,6 @@
 // All API routes. Used by the local server (index.ts) and the Vercel function (vercel.ts).
 import { Hono } from 'hono';
-import { getAlbum, getArtist, getHome, getPlaylist, getRadio, search, suggest } from './yt.ts';
+import { getAlbum, getArtist, getCharts, getHome, getMoodCategory, getMoods, getPlaylist, getPodcasts, getRadio, search, suggest } from './yt.ts';
 import { QUALITIES, streamAudio, type Quality } from './stream.ts';
 import { findLyrics } from './lyrics.ts';
 import { allowedArtUrl, fetchArt } from './art.ts';
@@ -13,6 +13,15 @@ export const app = new Hono();
 const api = new Hono();
 
 api.get('/home', async (c) => c.json(await getHome()));
+
+api.get('/charts', async (c) => c.json(await getCharts()));
+api.get('/podcasts', async (c) => c.json(await getPodcasts()));
+api.get('/moods', async (c) => c.json(await getMoods()));
+api.get('/moods/:params', async (c) => {
+  const params = c.req.param('params');
+  if (!/^[\w%=-]{4,200}$/.test(params)) return c.json({ error: 'Bad category' }, 400);
+  return c.json(await getMoodCategory(decodeURIComponent(params)));
+});
 
 api.get('/search', async (c) => {
   const q = c.req.query('q')?.trim().slice(0, 200);

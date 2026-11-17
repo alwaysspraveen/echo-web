@@ -62,7 +62,7 @@ const artistsOf = (o: Node): ArtistRef[] => {
 };
 
 export function toTrack(o: Node, fallback: Partial<Track> = {}): Track | null {
-  const id: string | undefined = o?.video_id ?? o?.id ?? o?.endpoint?.payload?.videoId;
+  const id: string | undefined = o?.video_id ?? o?.id ?? o?.endpoint?.payload?.videoId ?? o?.on_tap?.payload?.videoId; // on_tap: podcast episodes
   if (!id || !/^[\w-]{11}$/.test(id)) return null;
   const artists = artistsOf(o);
   const albumName = text(o?.album?.name);
@@ -77,6 +77,8 @@ export function toTrack(o: Node, fallback: Partial<Track> = {}): Track | null {
 }
 
 const kindOf = (o: Node): CardKind | null => {
+  if (o?.endpoint?.payload?.browseId?.startsWith('MPSP')) return 'playlist'; // podcast shows (labelled 'video')
+  if (o?.type === 'MusicMultiRowListItem' && o?.on_tap?.payload?.videoId) return 'song'; // podcast episodes
   switch (o?.item_type) {
     case 'song': return 'song';
     case 'video': return 'video';
@@ -88,6 +90,7 @@ const kindOf = (o: Node): CardKind | null => {
   if (browseId?.startsWith('MPRE')) return 'album';
   if (browseId?.startsWith('VL')) return 'playlist';
   if (browseId?.startsWith('UC')) return 'artist';
+  if (browseId?.startsWith('MPSP')) return 'playlist';
   if (o?.endpoint?.payload?.videoId) return 'song';
   return null;
 };
@@ -102,8 +105,9 @@ export function toCard(o: Node): Card | null {
     if (!track) return null;
     return { kind, id: track.id, title, subtitle: track.artists.map((a) => a.name).join(', ') || text(o.subtitle), thumbnail: track.thumbnail, track };
   }
-  const id: string | undefined = o.id ?? o.endpoint?.payload?.browseId;
+  let id: string | undefined = o.endpoint?.payload?.browseId ?? o.id;
   if (!id) return null;
+  if (id.startsWith('MPSP')) id = `VL${id.slice(4)}`; // podcast show → its episode playlist
   return { kind, id, title, subtitle: text(o.subtitle) ?? artistsOf(o).map((a) => a.name).join(', '), thumbnail: thumb(o) };
 }
 
@@ -258,3 +262,38 @@ export const getRadio = (videoId: string) =>
     const items = (panel.contents ?? []).map((c: Node) => c.primary ?? c);
     return tracks(items).filter((t) => t.id !== videoId);
   });
+
+// ---------- browse: charts, moods & genres, podcasts (same pages as the Android app) ----------
+
+async function browseShelves(browseId: string, params?: string): Promise<Shelf[]> {
+  const client = await yt();
+  const res: Node = await client.actions.execute('/browse', { browseId, ...(params ? { params } : {}), client: 'YTMUSIC', parse: true });
+  const memo = res.contents_memo;
+  const shelves: Shelf[] = [];
+  for (const s of memo?.get('MusicCarouselShelf') ?? []) { const sh = shelfOf(s); if (sh) shelves.push(sh); }
+  for (const s of memo?.get('MusicShelf') ?? []) { const sh = shelfOf(s); if (sh) shelves.push(sh); }
+  for (const g of memo?.get('Grid') ?? []) {
+    const title = text(g.header?.title) ?? text(g.title) ?? '';
+    const items = cards(g.items ?? g.contents);
+    if (items.length) shelves.push({ title, items });
+  }
+  return shelves;
+}
+
+export const getCharts = () => cached('charts', 60 * MIN, () => browseShelves('FEmusic_charts'));
+export const getPodcasts = () => cached('podcasts', 60 * MIN, () => browseShelves('FEmusic_non_music_audio'));
+
+export interface MoodGroup { title: string; items: { title: string; params: string; color?: string }[] }
+export const getMoods = () =>
+  cached('moods', 6 * 60 * MIN, async (): Promise<MoodGroup[]> => {
+    const client = await yt();
+    const res: Node = await client.actions.execute('/browse', { browseId: 'FEmusic_moods_and_genres', client: 'YTMUSIC', parse: true });
+    return (res.contents_memo?.get('Grid') ?? []).map((g: Node) => ({
+      title: text(g.header?.title) ?? '',
+      items: (g.items ?? g.contents ?? [])
+        .filter((b: Node) => b.type === 'MusicNavigationButton' && b.endpoint?.payload?.params)
+        .map((b: Node) => ({ title: text(b.button_text) ?? '', params: b.endpoint.payload.params, color: b.color ? `#${(Number(b.color) & 0xffffff).toString(16).padStart(6, '0')}` : undefined })),
+    })).filter((g: MoodGroup) => g.items.length);
+  });
+export const getMoodCategory = (params: string) =>
+  cached(`mood:${params}`, 60 * MIN, () => browseShelves('FEmusic_moods_and_genres_category', params));
