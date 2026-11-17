@@ -26,7 +26,7 @@ export function NowPlaying() {
   if (!open || !track) return null;
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-[99px] z-40 overflow-hidden bg-black animate-in fade-in-0 slide-in-from-bottom-4 duration-300" role="dialog" aria-label="Now playing">
+    <div className="no-drag fixed inset-x-0 top-0 bottom-[99px] z-40 overflow-hidden bg-black animate-in fade-in-0 slide-in-from-bottom-4 duration-300" role="dialog" aria-label="Now playing">
       {track.thumbnail && (
         <img src={track.thumbnail} alt="" aria-hidden referrerPolicy="no-referrer"
           className="absolute inset-0 size-full scale-125 object-cover opacity-70 blur-[90px] saturate-150" />
