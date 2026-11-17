@@ -7,7 +7,7 @@ import { recordPlay, toggleLike } from '@/lib/db';
 import { DEFAULT_EXTENSIONS, useSettings } from '@/lib/settings';
 import { getOfflineAudio } from '@/lib/offline';
 import { useLt } from '@/lib/listenTogether';
-import { audio, fadeIn, fadeOutCurrent, resetFade, seek, setBaseVolume } from './audio';
+import { audio, fadeIn, fadeOutCurrent, isInternalSeek, markInternalSeek, resetFade, seek, setBaseVolume } from './audio';
 import { useCurrentTrack, usePlayer } from './store';
 
 const artistLine = (names: { name: string }[]) => names.map((a) => a.name).join(', ');
@@ -33,6 +33,8 @@ export function PlayerEngine() {
   const quality = useSettings((s) => s.quality);
   // Object URL of a downloaded song's audio while it is the current source (null when streaming).
   const offlineUrl = useRef<string | null>(null);
+  // True while the current source is an extension (FLAC / 320 kbps) stream.
+  const onExtension = useRef(false);
 
   // Load a new source when the current track changes.
   useEffect(() => {
@@ -52,6 +54,7 @@ export function PlayerEngine() {
     getOfflineAudio(id).catch(() => undefined).then(async (blob) => {
       if (loadedId.current !== id) return; // user already moved on
       useNowSource.setState({ label: blob ? 'Downloaded' : null });
+      onExtension.current = false;
       // Extensions (Settings → Extensions): start right away from YouTube, and when an extension has
       // this song in higher quality, switch to it at the same position (seamless upgrade).
       const { extensions, preferExtension, quality } = useSettings.getState();
@@ -65,7 +68,8 @@ export function PlayerEngine() {
           const wasPlaying = !audio.paused || usePlayer.getState().playing;
           switching.current = true;
           audio.src = ext.url;
-          audio.addEventListener('loadedmetadata', () => { audio.currentTime = at; if (wasPlaying) audio.play().catch(() => {}); }, { once: true });
+          onExtension.current = true;
+          audio.addEventListener('loadedmetadata', () => { markInternalSeek(); audio.currentTime = at; if (wasPlaying) audio.play().catch(() => {}); }, { once: true });
           useNowSource.setState({ label: [ext.quality || ext.streamQuality || ext.audioQuality, ext.codec || ext.format].filter(Boolean).join(' · ').toUpperCase() || 'EXTENSION' });
         });
       }
@@ -158,7 +162,7 @@ export function PlayerEngine() {
       audio.addEventListener('playing', onPlaying, { once: true });
     };
     const reset = () => { triggered = false; };
-    const onSeek = () => { if (audio.duration - audio.currentTime > useSettings.getState().crossfadeSeconds) { triggered = false; resetFade(); } };
+    const onSeek = () => { if (audio.duration - audio.currentTime > useSettings.getState().crossfadeSeconds) { triggered = false; if (!isInternalSeek()) resetFade(); } };
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('loadstart', reset);
     audio.addEventListener('seeked', onSeek);
@@ -199,6 +203,18 @@ export function PlayerEngine() {
     const onError = () => {
       switching.current = false;
       if (!audio.getAttribute('src')) return;
+      const cur = st().queue[st().index];
+      if (onExtension.current && cur) {
+        // The FLAC / 320 kbps source stopped serving the file (e.g. 403 mid-song): keep playing
+        // the same song from YouTube Music at the same position instead of skipping it.
+        onExtension.current = false;
+        const at = audio.currentTime;
+        switching.current = true;
+        useNowSource.setState({ label: null });
+        audio.src = streamUrl(cur.id, useSettings.getState().quality);
+        audio.addEventListener('loadedmetadata', () => { markInternalSeek(); audio.currentTime = at; if (st().playing) audio.play().catch(() => {}); }, { once: true });
+        return;
+      }
       const failed = st().queue[st().index];
       errorStreak.current++;
       if (errorStreak.current >= 3) {

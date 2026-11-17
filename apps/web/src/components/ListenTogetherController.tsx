@@ -5,7 +5,7 @@ import {
   fromLt, ltCanControl, ltIsHost, requestSync, suggest, resumeRoom, refreshServerList, sendAction, sendBufferReady, setLtListener, toLt,
   useLt, type LtTrack, type PlaybackAction, type RoomSnapshot,
 } from '@/lib/listenTogether';
-import { audio, seek } from '@/player/audio';
+import { audio, isInternalSeek, seek } from '@/player/audio';
 import { usePlayer } from '@/player/store';
 
 const ids = (q: Track[]) => q.map((t) => t.id).join(',');
@@ -193,7 +193,7 @@ export function ListenTogetherController() {
       if (playChanged) send({ action: s.playing ? 'play' : 'pause', position: posMs() });
     });
     // User seeks (not the ones we make to follow the room).
-    const onSeeked = () => { if (!applying && now() - ourSeekAt > 1200 && ltCanControl()) send({ action: 'seek', position: posMs() }); };
+    const onSeeked = () => { if (!applying && !isInternalSeek() && now() - ourSeekAt > 1200 && ltCanControl()) send({ action: 'seek', position: posMs() }); };
     audio.addEventListener('seeked', onSeeked);
     return () => { unsub(); audio.removeEventListener('seeked', onSeeked); };
   }, [active]);
