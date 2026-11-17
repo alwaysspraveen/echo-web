@@ -14,7 +14,7 @@ import { SettingsDialog } from '@/components/SettingsDialog';
 import HomePage from '@/pages/Home';
 import SearchPage from '@/pages/Search';
 import { AlbumPage, ArtistPage, LocalPlaylistPage, PlaylistPage } from '@/pages/Collections';
-import { HistoryPage, LibraryPage, LikedPage } from '@/pages/Library';
+import { DownloadsPage, HistoryPage, LibraryPage, LikedPage } from '@/pages/Library';
 
 export default function App() {
   const main = useRef<HTMLElement>(null);
@@ -41,6 +41,7 @@ export default function App() {
                 <Route path="/library" element={<LibraryPage />} />
                 <Route path="/library/liked" element={<LikedPage />} />
                 <Route path="/library/history" element={<HistoryPage />} />
+                <Route path="/library/downloads" element={<DownloadsPage />} />
                 <Route path="/library/playlist/:id" element={<LocalPlaylistPage />} />
                 <Route path="*" element={<p className="px-2.5 pt-16 text-text-muted">This page doesn't exist.</p>} />
               </Routes>

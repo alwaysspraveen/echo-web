@@ -8,6 +8,8 @@ import { formatTime } from '@/player/audio';
 import { useCurrentTrack, usePlayer } from '@/player/store';
 import { cn } from '@/lib/utils';
 import { Artwork } from './Artwork';
+import { DownloadStateIcon } from './DownloadMenu';
+import { useDownloadProgress, useIsOffline } from '@/lib/offline';
 import { TrackMenuItems } from './TrackMenu';
 
 export function ArtistLinks({ track, className }: { track: Track; className?: string }) {
@@ -29,9 +31,10 @@ interface Props {
   numbered?: boolean;
   showAlbum?: boolean;
   onRemove?: (track: Track) => void;
+  removeLabel?: string;
 }
 
-export function TrackList({ tracks, numbered, showAlbum, onRemove }: Props) {
+export function TrackList({ tracks, numbered, showAlbum, onRemove, removeLabel }: Props) {
   const current = useCurrentTrack();
   const playing = usePlayer((s) => s.playing);
   const playList = usePlayer((s) => s.playList);
@@ -79,11 +82,11 @@ export function TrackList({ tracks, numbered, showAlbum, onRemove }: Props) {
                     {t.album?.id ? <Link to={`/album/${t.album.id}`} className="hover:text-text hover:underline">{t.album.name}</Link> : t.album?.name}
                   </div>
                 )}
-                <RowEnd track={t} onRemove={onRemove && (() => onRemove(t))} />
+                <RowEnd track={t} onRemove={onRemove && (() => onRemove(t))} removeLabel={removeLabel} />
               </li>
             </ContextMenuTrigger>
             <ContextMenuContent className="w-60">
-              <TrackMenuItems track={t} kind="context" onRemove={onRemove && (() => onRemove(t))} />
+              <TrackMenuItems track={t} kind="context" onRemove={onRemove && (() => onRemove(t))} removeLabel={removeLabel} />
             </ContextMenuContent>
           </ContextMenu>
         );
@@ -92,11 +95,14 @@ export function TrackList({ tracks, numbered, showAlbum, onRemove }: Props) {
   );
 }
 
-function RowEnd({ track, onRemove }: { track: Track; onRemove?: () => void }) {
+function RowEnd({ track, onRemove, removeLabel }: { track: Track; onRemove?: () => void; removeLabel?: string }) {
   const liked = useIsLiked(track.id);
+  const offline = useIsOffline(track.id);
+  const downloading = useDownloadProgress(track.id) !== undefined;
   return (
     <div className="flex items-center gap-1">
       {liked && <Heart className="size-4 fill-seed text-seed" aria-label="Liked" />}
+      {(offline || downloading) && <DownloadStateIcon track={track} className="size-4" />}
       <span className="w-12 text-right text-sm tabular-nums text-text-faint">{track.duration ? formatTime(track.duration) : ''}</span>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -106,7 +112,7 @@ function RowEnd({ track, onRemove }: { track: Track; onRemove?: () => void }) {
           <MoreHorizontal className="size-5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-60">
-          <TrackMenuItems track={track} kind="dropdown" onRemove={onRemove} />
+          <TrackMenuItems track={track} kind="dropdown" onRemove={onRemove} removeLabel={removeLabel} />
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

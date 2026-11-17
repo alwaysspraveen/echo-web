@@ -57,6 +57,8 @@ Open **Settings** at the bottom of the sidebar.
 - **Streaming quality:** High (Opus ~160 kbps), Normal (AAC ~128 kbps) or Data saver (Opus ~70 kbps). Changing it mid-song keeps your position.
 - **Download format:** **MP3 320 kbps** by default (44.1 kHz, ID3v2.3 tags, encoded from the best source, Opus ~160 kbps). You can also pick the untouched originals: `.opus` (~160 kbps) or `.m4a` (AAC ~128 kbps). Every download is tagged with title, artist, album and cover art and saved to your browser's Downloads folder. MP3 needs `ffmpeg` on the PATH (`brew install ffmpeg`); the originals still download without it, just untagged.
 
+**Offline downloads (like the Android app):** hover the download button in the player bar or Now Playing, or open a song's **Download** submenu, and choose **Save for offline**. Echo stores the song (best quality, ~160 kbps Opus) with its artwork and lyrics in the browser/app storage, and it plays with no internet. Downloaded songs show a ✓, and they're listed under **Downloads** in the sidebar. Albums and playlists have a **Download** button that saves every song. The other option, **Download MP3 file**, saves a file to your computer.
+
 Download a song from its right-click menu, the download button in the player bar, or the Now Playing view. There's no 320 kbps option because YouTube Music only serves that to Premium accounts.
 
 ## Keyboard shortcuts

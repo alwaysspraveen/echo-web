@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { ChevronDown, Download } from 'lucide-react';
-import { downloadTrack } from '@/lib/download';
+import { ChevronDown } from 'lucide-react';
+import { DownloadMenu, DownloadStateIcon } from './DownloadMenu';
 import { useCurrentTrack, useUi } from '@/player/store';
 import { Button } from '@/components/ui/button';
 import { Artwork } from './Artwork';
@@ -53,9 +53,11 @@ export function NowPlaying() {
             <h2 className="line-clamp-2 pb-1 font-display text-[clamp(1.75rem,3vw,2.5rem)] leading-tight font-extrabold tracking-tight text-white">{track.title}</h2>
             <div className="flex items-center justify-between gap-4">
               <ArtistLinks track={track} className="block min-w-0 pb-1 text-lg leading-snug text-white/75" />
-              <Button variant="ghost" onClick={() => downloadTrack(track)} className="shrink-0 bg-white/10 text-white hover:bg-white/20">
-                <Download />Download
-              </Button>
+              <DownloadMenu track={track}>
+                <Button variant="ghost" className="shrink-0 bg-white/10 text-white hover:bg-white/20 data-[state=open]:bg-white/20">
+                  <DownloadStateIcon track={track} />Download
+                </Button>
+              </DownloadMenu>
             </div>
           </div>
         </div>

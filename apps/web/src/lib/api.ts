@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { getOfflineLyrics } from './offline';
 import type { AlbumPage, ArtistPage, Lyrics, PlaylistPage, SearchResults, Shelf, Suggestions, Track } from '@echo/shared';
 
 export class ApiError extends Error {
@@ -67,6 +68,8 @@ export const useLyrics = (track: Track | undefined) =>
     staleTime: Infinity,
     retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
     queryFn: async ({ signal }) => {
+      const saved = await getOfflineLyrics(track!.id).catch(() => undefined);
+      if (saved !== undefined) return saved;
       const p = new URLSearchParams({ title: track!.title, artist: track!.artists.map((a) => a.name).join(', ') });
       if (track!.duration) p.set('duration', String(track!.duration));
       try {

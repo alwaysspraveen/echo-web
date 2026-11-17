@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
+import { HardDriveDownload, Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
 import { useSettings } from '@/lib/settings';
 import { usePlaylists } from '@/lib/db';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,7 @@ export function Sidebar() {
       <div className="scrollbar-thin -mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1">
         <NavLink to="/library/liked" className={link}><Heart className="size-5" />Liked songs</NavLink>
         <NavLink to="/library/history" className={link}><History className="size-5" />Recently played</NavLink>
+        <NavLink to="/library/downloads" className={link}><HardDriveDownload className="size-5" />Downloads</NavLink>
         {playlists.map((p) => (
           <NavLink key={p.id} to={`/library/playlist/${p.id}`} className={link}>
             <ListMusic className="size-5 shrink-0" /><span className="truncate">{p.name}</span>

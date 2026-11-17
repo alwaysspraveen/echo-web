@@ -6,6 +6,7 @@ import { TrackList } from '@/components/TrackList';
 import { CollectionHeader } from '@/components/Page';
 import { Artwork } from '@/components/Artwork';
 import { openNewPlaylist } from '@/components/NewPlaylistDialog';
+import { formatBytes, removeOffline, useOfflineTracks } from '@/lib/offline';
 
 export function LibraryPage() {
   const liked = useLiked();
@@ -65,6 +66,29 @@ export function HistoryPage() {
         actions={history.length > 0 && <Button size="lg" variant="ghost" onClick={() => window.confirm('Clear your listening history?') && db.history.clear()}>Clear history</Button>}
       />
       {history.length ? <TrackList tracks={history} showAlbum /> : <p className="px-2 text-text-muted">Songs you play show up here.</p>}
+    </>
+  );
+}
+
+export function DownloadsPage() {
+  const rows = useOfflineTracks();
+  const tracks = rows.map((r) => r.track);
+  const total = rows.reduce((n, r) => n + r.size, 0);
+  return (
+    <>
+      <CollectionHeader
+        downloadable={false}
+        kind="Offline"
+        title="Downloads"
+        tracks={tracks}
+        thumbnail={tracks[0]?.thumbnail}
+        subtitle={`${tracks.length} song${tracks.length === 1 ? '' : 's'} · ${formatBytes(total)} · plays without internet`}
+      />
+      {tracks.length ? (
+        <TrackList tracks={tracks} showAlbum onRemove={(t) => removeOffline(t)} removeLabel="Remove offline download" />
+      ) : (
+        <p className="px-2 text-text-muted">Songs you save for offline show up here. Hover the download button in the player and choose "Save for offline", or use Download on an album or playlist.</p>
+      )}
     </>
   );
 }
