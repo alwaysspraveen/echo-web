@@ -114,11 +114,11 @@ function endLocally(message?: string) {
   if (message) toast(message);
 }
 
-export async function startJam(name: string) {
+export async function startJam(name: string, code?: string) {
   const { server } = useJam.getState();
   useJam.setState({ status: 'connecting', name });
   try {
-    const r = await call<{ room: JamRoom; memberId: string; token: string; now: number }>(server, '/jam', { method: 'POST', body: JSON.stringify({ name }) });
+    const r = await call<{ room: JamRoom; memberId: string; token: string; now: number }>(server, '/jam', { method: 'POST', body: JSON.stringify({ name, code: code?.trim() || undefined }) });
     useJam.setState({ session: { server, code: r.room.code, memberId: r.memberId, token: r.token, name }, room: r.room, status: 'live' });
     startPolling();
     return r.room.code;

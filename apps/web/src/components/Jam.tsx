@@ -18,6 +18,7 @@ export function JamDialog() {
   const { dialogOpen, setDialogOpen, status, name: savedName } = useJam();
   const [name, setName] = useState(savedName);
   const [code, setCode] = useState('');
+  const [ownCode, setOwnCode] = useState('');
   const [error, setError] = useState('');
   const busy = status === 'connecting';
 
@@ -26,7 +27,9 @@ export function JamDialog() {
   const start = async () => {
     setError('');
     try {
-      const c = await startJam(name.trim() || 'Host');
+      if (ownCode && !/^[A-Z0-9]{4,12}$/.test(ownCode)) { setError('Room codes are 4 to 12 letters or digits.'); return; }
+      const c = await startJam(name.trim() || 'Host', ownCode || undefined);
+      setOwnCode('');
       done();
       toast(`Jam started. Share the code ${c}`);
     } catch (e) { setError((e as Error).message); }
@@ -34,7 +37,7 @@ export function JamDialog() {
   const join = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!/^[A-Za-z2-9]{6}$/.test(code.trim())) { setError('Enter the 6-character code from the host.'); return; }
+    if (!/^[A-Z0-9]{4,12}$/.test(code.trim())) { setError('Enter the room code from the host.'); return; }
     try {
       await joinJam(code, name.trim() || 'Guest');
       done();
@@ -55,17 +58,27 @@ export function JamDialog() {
           <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={30} placeholder="How others see you" />
         </label>
 
-        <Button size="lg" onClick={start} disabled={busy}><Radio />Start a Jam</Button>
+        <div className="flex gap-2">
+          <Input
+            value={ownCode}
+            onChange={(e) => setOwnCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12))}
+            placeholder="Room code (optional)"
+            aria-label="Room code for your Jam (optional)"
+            className="font-display tracking-[0.15em] uppercase placeholder:tracking-normal placeholder:normal-case"
+          />
+          <Button size="lg" onClick={start} disabled={busy} className="shrink-0"><Radio />Start a Jam</Button>
+        </div>
+        <p className="-mt-2 text-xs text-text-faint">Leave the code empty for a random one, or pick your own, like PARTY1.</p>
 
         <div className="flex items-center gap-3 text-xs text-text-faint"><span className="h-px flex-1 bg-line" />or join one<span className="h-px flex-1 bg-line" /></div>
 
         <form onSubmit={join} className="flex gap-2">
           <Input
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
-            placeholder="Code, e.g. KAZBE7"
+            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12))}
+            placeholder="Room code, e.g. KAZBE7"
             aria-label="Jam code"
-            className="font-display text-lg tracking-[0.2em] uppercase"
+            className="font-display text-lg tracking-[0.2em] uppercase placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:normal-case"
           />
           <Button type="submit" variant="secondary" size="lg" disabled={busy}>Join</Button>
         </form>
