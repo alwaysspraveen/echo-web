@@ -108,6 +108,13 @@
   }
 }
 
+/* macOS desktop app: no native title bar. The window drags from the top strip, the top bar and
+   the sidebar header; the sidebar header leaves room for the red/yellow/green buttons. */
+.desktop-mac .drag-strip { position: fixed; inset: 0 0 auto 0; height: 12px; z-index: 50; -webkit-app-region: drag; }
+.desktop-mac .drag-area { -webkit-app-region: drag; }
+.desktop-mac .drag-area :is(button, a, input, form) { -webkit-app-region: no-drag; }
+.desktop-mac .sidebar-brand { padding-top: 34px; }
+
 @utility glass {
   /* Web take on the app's Liquid Glass: blurred, saturated backdrop + light rim. */
   background: rgb(18 18 18 / 0.55);

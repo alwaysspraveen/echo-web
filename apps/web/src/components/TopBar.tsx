@@ -42,7 +42,7 @@ export function TopBar() {
   const showList = open && suggestions.length > 0 && q.trim().length > 1;
 
   return (
-    <header className="flex items-center gap-3 px-6 py-4">
+    <header className="drag-area flex items-center gap-3 px-6 py-4">
       <Button variant="secondary" size="icon" onClick={() => navigate(-1)} aria-label="Go back"><ChevronLeft className="size-5" /></Button>
       <Button variant="secondary" size="icon" onClick={() => navigate(1)} aria-label="Go forward"><ChevronRight className="size-5" /></Button>
       <form

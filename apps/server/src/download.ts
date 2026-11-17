@@ -36,7 +36,8 @@ function pictureBlock(image: Buffer, mime: string) {
 function runFfmpeg(args: string[], signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     // Arguments are passed as an array (no shell), so metadata can't inject commands.
-    const p = spawn('ffmpeg', ['-v', 'error', '-y', ...args], { signal, stdio: ['ignore', 'ignore', 'pipe'] });
+    // FFMPEG_PATH lets the desktop app point at its bundled ffmpeg; otherwise use the one on PATH.
+    const p = spawn(process.env.FFMPEG_PATH || 'ffmpeg', ['-v', 'error', '-y', ...args], { signal, stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
     let err = '';
     p.stderr.on('data', (d) => { err += d; });
     p.on('error', reject);

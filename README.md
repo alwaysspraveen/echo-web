@@ -27,6 +27,18 @@ npm start -w apps/server
 
 The server then also serves the built app on http://127.0.0.1:8787. Later, this is the process an Electron shell would launch.
 
+## Desktop app (Electron)
+
+`apps/desktop` wraps the same web app and API in Electron. Pages and the API are served on a private `app://echo` scheme inside the app, so nothing listens on a network port and the library persists between launches. ffmpeg is bundled, so MP3 downloads work out of the box, and they save straight to `~/Downloads`.
+
+```sh
+cd apps/desktop
+npm run dist:mac    # → release/Echo-Music-<version>-arm64.dmg (Apple Silicon)
+npm run dist:win    # → release/Echo-Music-Setup-<version>.exe (not built or tested yet)
+```
+
+Builds are ad-hoc signed, not notarized. A copy built on this Mac opens normally. A copy downloaded on another Mac needs right-click → **Open** the first time.
+
 ## Settings
 
 Open **Settings** at the bottom of the sidebar.
