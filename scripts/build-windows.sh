@@ -32,7 +32,7 @@ step "Fetching ffmpeg for Windows (for MP3 downloads)"
 node scripts/fetch-ffmpeg.mjs win32 x64
 
 step "Packaging the Windows installer"
-npx electron-builder --win nsis --x64
+npx electron-builder --win nsis --x64 --publish never
 
 step "Done"
 ls -lh release/*.exe
