@@ -40,3 +40,12 @@ test('invalid index is rejected', () => {
   const host = room.members[0];
   assert.ok(applyPlayback(room, host, { queue: [t(ID(1))], index: 5, playing: true, position: 0 }, 1));
 });
+
+test('custom room codes: format rules', () => {
+  const CODE = /^[A-Z0-9]{4,12}$/;
+  assert.ok(CODE.test('PRAVEEN'));
+  assert.ok(CODE.test('PARTY1'));
+  assert.ok(!CODE.test('AB'));
+  assert.ok(!CODE.test('HAS SPACE'));
+  assert.ok(!CODE.test('WAYTOOLONGCODE123'));
+});

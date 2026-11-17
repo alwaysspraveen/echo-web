@@ -8,7 +8,8 @@ import {
 } from './room.js';
 import { getStore, usingRedis } from './store.js';
 
-const CODE = /^[A-Z2-9]{6}$/;
+// Random codes are 6 unambiguous characters; hosts may also choose their own (4–12 letters/digits).
+const CODE = /^[A-Z0-9]{4,12}$/;
 const POLL_MS = 20_000; // long-poll window (well under Vercel's function limit)
 const POLL_STEP_MS = 700;
 
@@ -29,6 +30,13 @@ app.post('/jam', async (c) => {
   const b = await body(c);
   const store = getStore();
   const t = newToken();
+  if (typeof b.code === 'string' && b.code.trim()) {
+    const code = b.code.trim().toUpperCase();
+    if (!CODE.test(code)) return c.json({ error: 'Room codes are 4 to 12 letters or digits' }, 400);
+    const room = createRoom(code, cleanName(b.name), t, now());
+    if (await store.create(room)) return reply(c, room, { memberId: room.hostId, token: t });
+    return c.json({ error: `The code ${code} is already in use. Pick another one.` }, 409);
+  }
   for (let i = 0; i < 5; i++) {
     const room = createRoom(newCode(), cleanName(b.name), t, now());
     if (await store.create(room)) return reply(c, room, { memberId: room.hostId, token: t });
