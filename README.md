@@ -4,12 +4,14 @@ A laptop web version of [Echo Music](https://github.com/EchoMusicApp/Echo-Music)
 
 ## Run it
 
-Needs Node 22+.
+Needs **Node.js 22 or newer** (`node -v` to check; get it from https://nodejs.org). Works on macOS, Windows and Linux.
 
 ```sh
 npm install
 npm run dev
 ```
+
+Run both commands from the **`echo-web` folder** (the one with this README), not from `apps/web`. Otherwise only the web page starts and every request fails with a 502.
 
 Open the URL Vite prints (normally http://localhost:5173). `npm run dev` starts both:
 

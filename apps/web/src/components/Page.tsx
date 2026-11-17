@@ -11,7 +11,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   return (
     <div className="mx-auto max-w-md py-24 text-center">
       <p className="font-display text-xl font-bold">This didn't load</p>
-      <p className="mt-2 text-text-muted">{message}. Check that the Echo server is running, then try again.</p>
+      <p className="mt-2 text-text-muted">{message.startsWith("Can't reach") ? `${message}.` : `${message}. Check that the Echo server is running, then try again.`}</p>
       {onRetry && <Button variant="secondary" className="mt-5" onClick={onRetry}>Try again</Button>}
     </div>
   );
