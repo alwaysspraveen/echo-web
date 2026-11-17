@@ -127,10 +127,10 @@ export const usePlayer = create<PlayerState>()(
 export const useCurrentTrack = () => usePlayer((s) => (s.index >= 0 ? s.queue[s.index] : undefined));
 
 interface UiState {
-  panel: 'queue' | 'lyrics' | null;
+  panel: 'queue' | 'lyrics' | 'jam' | null;
   nowPlaying: boolean;
   setPanel: (p: UiState['panel']) => void;
-  togglePanel: (p: 'queue' | 'lyrics') => void;
+  togglePanel: (p: 'queue' | 'lyrics' | 'jam') => void;
   setNowPlaying: (open: boolean) => void;
 }
 

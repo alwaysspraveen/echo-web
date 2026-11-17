@@ -11,6 +11,8 @@ import { NewPlaylistDialog } from '@/components/NewPlaylistDialog';
 import { PlayerEngine } from '@/player/PlayerEngine';
 import { ThemeController } from '@/components/ThemeController';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import { JamDialog } from '@/components/Jam';
+import { JamController } from '@/components/JamController';
 import HomePage from '@/pages/Home';
 import SearchPage from '@/pages/Search';
 import { AlbumPage, ArtistPage, LocalPlaylistPage, PlaylistPage } from '@/pages/Collections';
@@ -54,6 +56,8 @@ export default function App() {
       <NowPlaying />
       <NewPlaylistDialog />
       <SettingsDialog />
+      <JamDialog />
+      <JamController />
       <ThemeController />
       <PlayerEngine />
       <Toaster position="top-center" />
