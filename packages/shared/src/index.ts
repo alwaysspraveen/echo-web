@@ -37,6 +37,12 @@ export interface SearchResults {
   playlists: Card[];
 }
 
+/** As-you-type suggestions: rich results (with artwork) plus text queries. */
+export interface Suggestions {
+  items: Card[];
+  queries: string[];
+}
+
 export interface AlbumPage {
   id: string;
   title: string;

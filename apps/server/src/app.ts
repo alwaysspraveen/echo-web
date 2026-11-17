@@ -22,7 +22,7 @@ api.get('/search', async (c) => {
 
 api.get('/suggest', async (c) => {
   const q = c.req.query('q')?.trim().slice(0, 200);
-  return c.json(q ? await suggest(q) : []);
+  return c.json(q ? await suggest(q) : { items: [], queries: [] });
 });
 
 api.get('/album/:id', async (c) => {

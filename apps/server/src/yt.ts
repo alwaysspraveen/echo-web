@@ -1,7 +1,7 @@
 import vm from 'node:vm';
 import { Innertube, Platform } from 'youtubei.js';
 import type {
-  AlbumPage, ArtistPage, ArtistRef, Card, CardKind, PlaylistPage, SearchResults, Shelf, Track,
+  AlbumPage, ArtistPage, ArtistRef, Card, CardKind, PlaylistPage, SearchResults, Shelf, Suggestions, Track,
 } from '@echo/shared';
 
 // youtubei.js needs a JS evaluator to decipher stream URLs. YouTube's player script runs
@@ -159,14 +159,15 @@ export const search = (q: string) =>
   });
 
 export const suggest = (q: string) =>
-  cached(`suggest:${q}`, 10 * MIN, async () => {
+  cached(`suggest:${q}`, 10 * MIN, async (): Promise<Suggestions> => {
     const client = await yt();
     const sections: Node[] = await client.music.getSearchSuggestions(q);
-    return sections
-      .flatMap((s) => s.contents ?? [])
-      .map((c: Node) => text(c.suggestion))
-      .filter((s): s is string => !!s)
-      .slice(0, 8);
+    const all: Node[] = sections.flatMap((s) => s.contents ?? []);
+    return {
+      // Rich results (songs, artists, albums, playlists with artwork), as in YouTube Music's own box.
+      items: all.filter((c) => !c.suggestion).map(toCard).filter((c): c is Card => c !== null).slice(0, 6),
+      queries: all.map((c) => text(c.suggestion)).filter((s): s is string => !!s).slice(0, 6),
+    };
   });
 
 export const getAlbum = (id: string) =>
