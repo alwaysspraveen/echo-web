@@ -33,14 +33,22 @@ export function NowPlaying() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/30 to-black/80" />
 
       <div className="relative grid h-full grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-12 px-12 pt-6">
-        <div className="flex min-h-0 flex-col">
+        {/* Rows: close button / artwork (takes what's left) / title. The text never shrinks. */}
+        <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] pb-8">
           <Button variant="ghost" size="icon-lg" onClick={close} aria-label="Close now playing" className="-ml-2 text-white hover:bg-white/10">
             <ChevronDown className="size-6" />
           </Button>
-          <div className="flex min-h-0 flex-1 flex-col justify-center pb-10">
-            <Artwork src={track.thumbnail} className="aspect-square w-full max-w-[min(100%,58vh)] rounded-[28px] shadow-2xl shadow-black/50" />
-            <h2 className="mt-7 line-clamp-2 font-display text-4xl font-extrabold tracking-tight text-white">{track.title}</h2>
-            <ArtistLinks track={track} className="mt-1 block text-lg text-white/75" />
+          {/* Size container: the artwork is the largest square that fits both width and height. */}
+          <div className="flex min-h-0 items-end py-5" style={{ containerType: 'size' }}>
+            <Artwork
+              src={track.thumbnail}
+              className="rounded-[28px] shadow-2xl shadow-black/50"
+              style={{ width: 'min(100cqw, 100cqh, 640px)', height: 'min(100cqw, 100cqh, 640px)' }}
+            />
+          </div>
+          <div className="min-w-0">
+            <h2 className="line-clamp-2 pb-1 font-display text-[clamp(1.75rem,3vw,2.5rem)] leading-tight font-extrabold tracking-tight text-white">{track.title}</h2>
+            <ArtistLinks track={track} className="block pb-1 text-lg leading-snug text-white/75" />
           </div>
         </div>
         <div className="scrollbar-thin min-h-0 overflow-y-auto [mask-image:linear-gradient(transparent,black_15%,black_85%,transparent)]">
