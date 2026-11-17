@@ -4,7 +4,7 @@ import { fetchRadio, streamUrl } from '@/lib/api';
 import { recordPlay, toggleLike } from '@/lib/db';
 import { useSettings } from '@/lib/settings';
 import { getOfflineAudio } from '@/lib/offline';
-import { useJam } from '@/lib/jam';
+import { useLt } from '@/lib/listenTogether';
 import { audio, seek } from './audio';
 import { useCurrentTrack, usePlayer } from './store';
 
@@ -89,7 +89,7 @@ export function PlayerEngine() {
   // When the last track starts, queue "radio" (similar songs) so music keeps going.
   useEffect(() => {
     if (!track || repeat !== 'off' || index !== queueLength - 1 || radioFor === track.id) return;
-    if (useJam.getState().session) return; // in a Jam the shared queue is the queue
+    if (useLt.getState().session) return; // in Listen Together the shared queue is the queue
     const seed = track.id;
     fetchRadio(seed)
       .then((tracks) => {

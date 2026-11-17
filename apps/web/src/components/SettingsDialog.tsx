@@ -2,7 +2,7 @@ import { Check, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { DOWNLOAD_OPTIONS, QUALITY_OPTIONS, useSettings } from '@/lib/settings';
 import { PRESETS } from '@/lib/theme';
-import { DEFAULT_JAM_SERVER, useJam } from '@/lib/jam';
+import { DEFAULT_LT_SERVER, useLt } from '@/lib/listenTogether';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -75,8 +75,8 @@ export function SettingsDialog() {
           <Choice label="Download format" value={s.downloadFormat} options={DOWNLOAD_OPTIONS} onChange={s.setDownloadFormat} />
         </section>
         <section className="mt-2">
-          <h3 className="mb-1 font-display text-lg font-bold">Jam server</h3>
-          <p className="mb-3 text-sm text-text-muted">Coordinates Jams between devices. It never carries audio. Change it only if you host your own.</p>
+          <h3 className="mb-1 font-display text-lg font-bold">Listen Together server</h3>
+          <p className="mb-3 text-sm text-text-muted">The same server Echo for Android uses, so phones and laptops can share rooms. It never carries audio.</p>
           <JamServerField />
         </section>
       </DialogContent>
@@ -101,11 +101,11 @@ function Swatch({ label, selected, onClick, style, icon }: { label: string; sele
 }
 
 function JamServerField() {
-  const { server, setServer } = useJam();
+  const { server, setServer } = useLt();
   return (
     <div className="flex gap-2">
-      <Input defaultValue={server} key={server} onBlur={(e) => setServer(e.target.value)} aria-label="Jam server URL" spellCheck={false} />
-      {server !== DEFAULT_JAM_SERVER && <button onClick={() => setServer(DEFAULT_JAM_SERVER)} className="shrink-0 rounded-full px-3 text-sm text-text-muted hover:bg-accent">Reset</button>}
+      <Input defaultValue={server} key={server} onBlur={(e) => setServer(e.target.value)} aria-label="Listen Together server URL" spellCheck={false} />
+      {server !== DEFAULT_LT_SERVER && <button onClick={() => setServer(DEFAULT_LT_SERVER)} className="shrink-0 rounded-full px-3 text-sm text-text-muted hover:bg-accent">Reset</button>}
     </div>
   );
 }

@@ -3,8 +3,8 @@ import { useCurrentTrack, usePlayer, useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
 import { Artwork } from './Artwork';
 import { LyricsView } from './LyricsView';
-import { JamPanel } from './Jam';
-import { useJam } from '@/lib/jam';
+import { ListenTogetherPanel } from './ListenTogether';
+import { useLt } from '@/lib/listenTogether';
 
 function Queue() {
   const { queue, index, jumpTo, remove, clear } = usePlayer();
@@ -49,10 +49,10 @@ function QueueRow({ track, active, onPlay, onRemove }: { track: ReturnType<typeo
 export function SidePanel() {
   const { panel, setPanel } = useUi();
   const track = useCurrentTrack();
-  const inJam = useJam((s) => !!s.session);
+  const inJam = useLt((s) => !!s.session);
   if (!panel) return null;
   return (
-    <aside className="flex w-[340px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-glass xl:w-[380px]" aria-label={panel === 'queue' ? 'Queue' : panel === 'jam' ? 'Jam' : 'Lyrics'}>
+    <aside className="flex w-[340px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-glass xl:w-[380px]" aria-label={panel === 'queue' ? 'Queue' : panel === 'jam' ? 'Listen Together' : 'Lyrics'}>
       <div className="flex items-center gap-1 p-2">
         {(inJam ? (['queue', 'lyrics', 'jam'] as const) : (['queue', 'lyrics'] as const)).map((p) => (
           <button
@@ -61,7 +61,7 @@ export function SidePanel() {
             aria-pressed={panel === p}
             className={cn('h-9 rounded-full px-4 text-sm font-semibold capitalize', panel === p ? 'bg-text text-bg' : 'text-text-muted hover:bg-accent hover:text-text')}
           >
-            {p}
+            {p === 'jam' ? 'Together' : p}
           </button>
         ))}
         <button onClick={() => setPanel(null)} className="ml-auto grid size-9 place-items-center rounded-full text-text-muted hover:bg-accent hover:text-text" aria-label="Close panel">
@@ -69,7 +69,7 @@ export function SidePanel() {
         </button>
       </div>
       <div className={cn('scrollbar-thin min-h-0 flex-1 overflow-y-auto', panel === 'lyrics' && '[mask-image:linear-gradient(transparent,black_12%,black_88%,transparent)]')}>
-        {panel === 'queue' ? <Queue /> : panel === 'jam' ? <JamPanel /> : <LyricsView track={track} />}
+        {panel === 'queue' ? <Queue /> : panel === 'jam' ? <ListenTogetherPanel /> : <LyricsView track={track} />}
       </div>
     </aside>
   );
