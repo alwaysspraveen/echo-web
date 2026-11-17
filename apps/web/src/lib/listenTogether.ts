@@ -25,6 +25,8 @@ const PAYLOADS: Record<string, string> = {
   room_created: 'RoomCreatedPayload', join_request: 'JoinRequestPayload', join_approved: 'JoinApprovedPayload',
   join_rejected: 'JoinRejectedPayload', user_joined: 'UserJoinedPayload', user_left: 'UserLeftPayload',
   sync_playback: 'PlaybackActionPayload', buffer_wait: 'BufferWaitPayload', buffer_complete: 'BufferCompletePayload',
+  suggest_track: 'SuggestTrackPayload', approve_suggestion: 'ApproveSuggestionPayload', reject_suggestion: 'RejectSuggestionPayload',
+  suggestion_received: 'SuggestionReceivedPayload', suggestion_approved: 'SuggestionApprovedPayload', suggestion_rejected: 'SuggestionRejectedPayload',
   error: 'ErrorPayload', host_changed: 'HostChangedPayload', kicked: 'KickedPayload', sync_state: 'SyncStatePayload',
   reconnected: 'ReconnectedPayload', user_reconnected: 'UserReconnectedPayload', user_disconnected: 'UserDisconnectedPayload',
   room_settings_changed: 'UpdateRoomSettingsPayload',
@@ -72,6 +74,7 @@ export const fromLt = (t: LtTrack): Track => ({
 
 export interface LtUser { userId: string; username: string; isHost: boolean; isConnected: boolean }
 export interface JoinRequest { userId: string; username: string }
+export interface Suggestion { id: string; from: string; track: LtTrack }
 export interface PlaybackAction { action: string; trackId?: string; position?: number; trackInfo?: LtTrack; insertNext?: boolean; queue?: LtTrack[]; queueTitle?: string; serverTime?: number }
 export interface RoomSnapshot { currentTrack?: LtTrack; isPlaying: boolean; position: number; lastUpdate: number; queue: LtTrack[] }
 
@@ -83,6 +86,7 @@ interface LtState {
   hostId: string | null;
   users: LtUser[];
   requests: JoinRequest[];
+  suggestions: Suggestion[];
   allowControl: boolean;
   server: string;
   name: string;
@@ -94,7 +98,7 @@ interface LtState {
 export const useLt = create<LtState>()(
   persist(
     (set) => ({
-      session: null, status: 'idle', hostId: null, users: [], requests: [], allowControl: false,
+      session: null, status: 'idle', hostId: null, users: [], requests: [], suggestions: [], allowControl: false,
       server: DEFAULT_LT_SERVER, name: '', dialogOpen: false,
       setServer: (server) => set({ server: server.trim() || DEFAULT_LT_SERVER }),
       setDialogOpen: (dialogOpen) => set({ dialogOpen }),
@@ -104,10 +108,11 @@ export const useLt = create<LtState>()(
 );
 
 export const ltIsHost = () => { const s = useLt.getState(); return !!s.session && s.hostId === s.session.userId; };
-export const ltCanControl = () => ltIsHost() || useLt.getState().allowControl;
+/** The Listen Together server lets only the host control playback; guests suggest songs. */
+export const ltCanControl = () => ltIsHost();
 
 // Playback events go to the controller (ListenTogetherController.tsx), which drives the player.
-type Listener = { onAction: (a: PlaybackAction) => void; onSnapshot: (s: RoomSnapshot, reason: 'joined' | 'sync') => void; onBufferComplete: (trackId: string) => void; onUserJoined: () => void };
+type Listener = { onDenied: () => void; onAddSuggested: (t: LtTrack) => void; onAction: (a: PlaybackAction) => void; onSnapshot: (s: RoomSnapshot, reason: 'joined' | 'sync') => void; onBufferComplete: (trackId: string) => void; onUserJoined: () => void };
 let listener: Listener | null = null;
 export const setLtListener = (l: Listener | null) => { listener = l; };
 
@@ -189,6 +194,18 @@ async function onMessage(ev: MessageEvent) {
     case 'sync_state':
       listener?.onSnapshot({ currentTrack: p.currentTrack?.id ? p.currentTrack : undefined, isPlaying: !!p.isPlaying, position: Number(p.position) || 0, lastUpdate: Number(p.lastUpdate) || Date.now(), queue: p.queue ?? [] }, 'sync');
       break;
+    case 'suggestion_received':
+      if (ltIsHost() && p.trackInfo?.id) {
+        useLt.setState({ suggestions: [...st.suggestions, { id: p.suggestionId, from: p.fromUsername, track: p.trackInfo }] });
+        toast(`${p.fromUsername} suggested "${p.trackInfo.title}"`, { id: `lt-sug-${p.suggestionId}` });
+      }
+      break;
+    case 'suggestion_approved':
+      if (p.trackInfo?.title) toast(`The host added "${p.trackInfo.title}"`);
+      break;
+    case 'suggestion_rejected':
+      toast("The host didn't add your suggestion");
+      break;
     case 'buffer_complete':
       listener?.onBufferComplete(p.trackId);
       break;
@@ -197,6 +214,13 @@ async function onMessage(ev: MessageEvent) {
       break;
     case 'error': {
       const msg = p.message || p.code || 'Listen Together error';
+      if (p.code === 'not_host') {
+        // The server refused our playback change: we don't have control. Follow the room again.
+        useLt.setState({ allowControl: false });
+        listener?.onDenied();
+        toast(msg, { id: 'lt-not-host' });
+        break;
+      }
       if (pending) { pending.reject(new Error(/not.?found|invalid.?room/i.test(msg) ? 'No room with that code' : msg)); pending = null; hangUp(); }
       else if (/session|token|room.*(not|closed)/i.test(msg) && wanted?.kind === 'reconnect') endLocally('The Listen Together room has ended');
       else toast.error(msg);
@@ -243,7 +267,7 @@ function hangUp() {
 
 function endLocally(message?: string) {
   hangUp();
-  useLt.setState({ session: null, status: 'idle', hostId: null, users: [], requests: [] });
+  useLt.setState({ session: null, status: 'idle', hostId: null, users: [], requests: [], suggestions: [] });
   if (message) toast(message);
 }
 
@@ -270,7 +294,16 @@ export function leaveRoom() {
 }
 export function approve(userId: string) { send('approve_join', { userId }); useLt.setState({ requests: useLt.getState().requests.filter((r) => r.userId !== userId) }); }
 export function decline(userId: string) { send('reject_join', { userId, reason: 'Declined by host' }); useLt.setState({ requests: useLt.getState().requests.filter((r) => r.userId !== userId) }); }
-export function setAllowControl(allow: boolean) { send('update_room_settings', { allowParticipantControl: allow }); useLt.setState({ allowControl: allow }); }
+export function suggest(track: LtTrack) { send('suggest_track', { trackInfo: track }); }
+export function acceptSuggestion(s: Suggestion) {
+  send('approve_suggestion', { suggestionId: s.id });
+  listener?.onAddSuggested(s.track);
+  useLt.setState({ suggestions: useLt.getState().suggestions.filter((x) => x.id !== s.id) });
+}
+export function declineSuggestion(s: Suggestion) {
+  send('reject_suggestion', { suggestionId: s.id, reason: 'Declined by host' });
+  useLt.setState({ suggestions: useLt.getState().suggestions.filter((x) => x.id !== s.id) });
+}
 export function sendAction(a: PlaybackAction) { send('playback_action', a as unknown as Record<string, unknown>); }
 export function sendBufferReady(trackId: string) { send('buffer_ready', { trackId }); }
 export function requestSync() { send('request_sync'); }

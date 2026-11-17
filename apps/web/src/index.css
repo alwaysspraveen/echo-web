@@ -114,7 +114,7 @@
 .desktop-mac .drag-area { -webkit-app-region: drag; }
 .desktop-mac .drag-area :is(button, a, input, form) { -webkit-app-region: no-drag; }
 .desktop-mac .sidebar-brand { padding-top: 34px; }
-.desktop-mac .np-stage { padding-top: 64px; }
+.desktop-mac .np-stage { padding-top: 40px; }
 /* Drag regions apply even under overlays, so anything layered on top must opt out explicitly,
    otherwise clicks there start a window drag instead of reaching the button. */
 .desktop-mac :is(.no-drag, [role="dialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]) { -webkit-app-region: no-drag; }
