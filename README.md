@@ -49,12 +49,6 @@ The Windows installer is unsigned, so on first run Windows shows *"Windows prote
 
 Builds are ad-hoc signed, not notarized. A copy built on this Mac opens normally. A copy downloaded on another Mac needs right-click → **Open** the first time.
 
-## Jam (listen together)
-
-Click **Jam** in the sidebar or the player bar. **Start a Jam** gives you a room code. Leave the code field empty for a random one, or type your own (4–12 letters/digits, like `PARTY1`). Friends click **Jam → Join** in their own Echo and enter it. Everyone hears the same song at the same moment. Anyone can add songs with *Add to queue* / *Play next*, and the host can turn "Everyone can control" (play, pause, skip, seek) on or off. When the host leaves, the Jam ends.
-
-Each person's Echo streams and plays the music itself. The Jam server (`apps/jam`, deployed on Vercel with Upstash Redis) only coordinates who's in the room, the shared queue and playback position. It never carries audio. Rooms expire 12 hours after the last change. To self-host it, deploy `apps/jam` to Vercel, add the Upstash for Redis integration, and set the server URL in **Settings → Jam server**.
-
 ## Features ported from Echo for Android
 
 - **Explore**: Charts, Moods & genres, Podcasts (sidebar → Explore).
