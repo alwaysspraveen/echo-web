@@ -42,6 +42,11 @@ FILES=(
 )
 for f in "${FILES[@]}"; do [ -f "$f" ] || { echo "Missing build output: $f" >&2; exit 1; }; done
 
+# Fixed-name copies so the README's "latest/download" links always point at the newest version.
+cp -f "Echo-Music-$VERSION-arm64.dmg" Echo-Music-mac.dmg
+cp -f "Echo-Music-Setup-$VERSION.exe" Echo-Music-windows.exe
+FILES+=(Echo-Music-mac.dmg Echo-Music-windows.exe)
+
 step "Publishing GitHub release v$VERSION"
 gh release create "v$VERSION" "${FILES[@]}" --repo "$REPO" --title "Echo Music $VERSION" \
   --notes "Echo Music $VERSION for macOS (Apple Silicon) and Windows. Installed apps update automatically."

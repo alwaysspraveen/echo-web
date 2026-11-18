@@ -13,6 +13,23 @@ A laptop web version of [Echo Music](https://github.com/EchoMusicApp/Echo-Music)
 | ![Equalizer](docs/screenshots/equalizer.jpg) | |
 | **Equalizer** with volume boost, bass and treble | |
 
+## Download
+
+| | |
+|---|---|
+| **macOS** (Apple Silicon) | [Download for Mac](https://github.com/alwaysspraveen/echo-web/releases/latest/download/Echo-Music-mac.dmg) |
+| **Windows** (64-bit) | [Download for Windows](https://github.com/alwaysspraveen/echo-web/releases/latest/download/Echo-Music-windows.exe) |
+
+These always get the newest version. Installed apps update themselves (Settings → Check for updates). All versions: [Releases](https://github.com/alwaysspraveen/echo-web/releases).
+
+**First launch**
+
+- **Mac:** the app isn't notarized by Apple. If macOS says it "can't be opened" or "is damaged", move it to Applications and run this once in Terminal:
+  ```sh
+  xattr -dr com.apple.quarantine "/Applications/Echo Music.app"
+  ```
+- **Windows:** if you see "Windows protected your PC", click **More info → Run anyway**.
+
 ## Run it
 
 Needs **Node.js 22 or newer** (`node -v` to check; get it from https://nodejs.org). Works on macOS, Windows and Linux.
