@@ -5,6 +5,7 @@ import { DOWNLOAD_OPTIONS, QUALITY_OPTIONS, useSettings } from '@/lib/settings';
 import { PRESETS } from '@/lib/theme';
 import { DEFAULT_LT_SERVER, useLt } from '@/lib/listenTogether';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 function Choice<T extends string>({ value, options, onChange, label }: {
@@ -79,7 +80,7 @@ export function SettingsDialog() {
               <span className="block font-semibold">Show canvas</span>
               <span className="block text-sm text-text-muted">Animated album artwork in Now Playing, when the album has one.</span>
             </span>
-            <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={s.canvas} onChange={(e) => s.setCanvas(e.target.checked)} />
+            <Switch checked={s.canvas} onCheckedChange={s.setCanvas} aria-label="Show canvas" />
           </label>
         </section>
 
@@ -90,7 +91,7 @@ export function SettingsDialog() {
               <span className="block font-semibold">Enable Echo Brain</span>
               <span className="block text-sm text-text-muted">Automatically add AI recommendations based on your listening habits.</span>
             </span>
-            <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={s.echoBrain} onChange={(e) => s.setEchoBrain(e.target.checked)} />
+            <Switch checked={s.echoBrain} onCheckedChange={s.setEchoBrain} aria-label="Enable Echo Brain" />
           </label>
         </section>
 
@@ -107,7 +108,7 @@ export function SettingsDialog() {
               <span className="block font-semibold">Crossfade between songs</span>
               <span className="block text-sm text-text-muted">The end of a song blends into the start of the next.</span>
             </span>
-            <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={s.crossfade} onChange={(e) => s.setCrossfade(e.target.checked)} />
+            <Switch checked={s.crossfade} onCheckedChange={s.setCrossfade} aria-label="Crossfade between songs" />
           </label>
           {s.crossfade && (
             <label className="mt-3 flex items-center gap-3 px-1 text-sm">
@@ -189,8 +190,7 @@ function ExtensionsField() {
             <span className="block truncate font-semibold">{x.name}</span>
             <span className="block truncate text-xs text-text-muted">{x.base}</span>
           </span>
-          <input type="checkbox" aria-label={`Use ${x.name}`} className="size-5 accent-[var(--seed)]" checked={x.enabled}
-            onChange={(e) => setExtensions(extensions.map((y) => (y.base === x.base ? { ...y, enabled: e.target.checked } : y)))} />
+          <Switch aria-label={`Use ${x.name}`} checked={x.enabled} onCheckedChange={(on) => setExtensions(extensions.map((y) => (y.base === x.base ? { ...y, enabled: on } : y)))} />
           <button onClick={() => setExtensions(extensions.filter((y) => y.base !== x.base))} className="rounded-full px-2 text-sm text-text-muted hover:text-destructive" aria-label={`Remove ${x.name}`}>Remove</button>
         </div>
       ))}
@@ -205,7 +205,7 @@ function ExtensionsField() {
             <span className="block font-semibold">Prefer extension audio</span>
             <span className="block text-sm text-text-muted">Look for each song on your extensions first.</span>
           </span>
-          <input type="checkbox" className="size-5 accent-[var(--seed)]" checked={preferExtension} onChange={(e) => setPreferExtension(e.target.checked)} />
+          <Switch checked={preferExtension} onCheckedChange={setPreferExtension} aria-label="Prefer extension audio" />
         </label>
       )}
     </div>
