@@ -10,8 +10,6 @@ import { useSettings } from '@/lib/settings';
 import { cn } from '@/lib/utils';
 import { LyricsView } from './LyricsView';
 import { ArtistLinks } from './TrackList';
-import { TvTransport } from './TvTransport';
-import { isTv } from '@/lib/tv';
 
 /**
  * Full-window "now playing" stage: the artwork blurred deep behind everything (the web take on
@@ -78,7 +76,7 @@ export function NowPlaying() {
       <Button variant="ghost" size="icon-lg" onClick={close} aria-label="Close now playing" className="absolute top-5 right-6 z-10 text-white hover:bg-white/10">
         <ChevronDown className="size-6" />
       </Button>
-      <div className="np-stage relative grid h-full grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-12 px-12 pt-6 pb-[108px] tv-np-stage">
+      <div className="np-stage relative grid h-full grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-12 px-12 pt-6 pb-[108px]">
         {/* Rows: artwork (takes what's left) / title. The text never shrinks. */}
         <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] pb-8">
           {/* Size container: the artwork is the largest square that fits both width and height. */}
@@ -117,7 +115,6 @@ export function NowPlaying() {
           <div className="min-w-0">
             <h2 className="line-clamp-2 pb-1 font-display text-[clamp(1.75rem,3vw,2.5rem)] leading-tight font-extrabold tracking-tight text-white">{track.title}</h2>
             <ArtistLinks track={track} className="block pb-1 text-lg leading-snug text-white/75" />
-            {isTv && <TvTransport />}
           </div>
         </div>
         <div className="scrollbar-thin min-h-0 overflow-y-auto [mask-image:linear-gradient(transparent,black_15%,black_85%,transparent)]">

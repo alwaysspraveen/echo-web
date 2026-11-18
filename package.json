@@ -16,8 +16,6 @@
     "start": "npm run start -w apps/server"
   },
   "devDependencies": {
-    "@babel/core": "^7.28.6",
-    "@babel/plugin-transform-unicode-property-regex": "^7.27.1",
     "concurrently": "^9.2.1"
   },
   "engines": {

@@ -89,6 +89,9 @@ export class Caster {
   private transportId = '';
   private sessionId = '';
   private mediaSessionId = 0;
+  /** Song we asked the device to load; statuses are ignored until the device confirms it. */
+  private expectVideo = '';
+  private confirmed = false;
   private server: Server | null = null;
   private token = '';
   private serverPort = 0;
@@ -182,6 +185,8 @@ export class Caster {
     if (!this.transportId) { this.pendingLoad = { media, position, autoplay }; return; }
     const host = this.localAddressFor(this.status.device?.host ?? '');
     const url = `http://${host}:${this.serverPort}/cast/${this.token}/stream/${encodeURIComponent(media.videoId)}`;
+    this.expectVideo = media.videoId;
+    this.confirmed = false;
     this.send(this.transportId, NS.media, {
       type: 'LOAD',
       requestId: this.requestId++,
@@ -255,8 +260,15 @@ export class Caster {
     if (namespace === NS.media && data.type === 'MEDIA_STATUS') {
       const m = (data.status ?? [])[0];
       if (!m) return;
-      this.mediaSessionId = m.mediaSessionId ?? this.mediaSessionId;
       const videoId = m.media?.customData?.mediaId;
+      // After a LOAD the device can still report the previous song (often without media info);
+      // using its position for the new song made playback jump. Wait for the new song's status.
+      if (this.expectVideo) {
+        if (videoId && videoId !== this.expectVideo) return;
+        if (videoId === this.expectVideo) this.confirmed = true;
+        if (!this.confirmed) return;
+      }
+      this.mediaSessionId = m.mediaSessionId ?? this.mediaSessionId;
       this.setStatus({ playerState: m.playerState, idleReason: m.idleReason, currentTime: m.currentTime, ...(videoId ? { videoId } : {}) });
     }
     if (namespace === NS.media && (data.type === 'LOAD_FAILED' || data.type === 'LOAD_CANCELLED')) this.setStatus({ error: data.type === 'LOAD_FAILED' ? 'The device could not play this song' : undefined });
