@@ -2,6 +2,10 @@ package com.praveen.echomusic.tv;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
+import android.speech.RecognizerIntent;
+import org.json.JSONObject;
+import java.util.ArrayList;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -31,6 +35,7 @@ public class MainActivity extends Activity {
     /** Exposed to the page as window.echoTv (its presence switches the app to TV mode). */
     public class Bridge {
         @JavascriptInterface public void exit() { main.post(MainActivity.this::finish); }
+        @JavascriptInterface public void voiceSearch() { main.post(MainActivity.this::startVoiceSearch); }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -99,8 +104,32 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    private static final int VOICE_REQUEST = 7;
+
+    /** Android TV's own voice input (the remote's microphone). */
+    private void startVoiceSearch() {
+        Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Search songs, artists, albums");
+        try { startActivityForResult(i, VOICE_REQUEST); } catch (Exception ignored) { }
+    }
+
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (request != VOICE_REQUEST || result != RESULT_OK || data == null) return;
+        ArrayList<String> said = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+        if (said == null || said.isEmpty()) return;
+        web.evaluateJavascript("window.echoTvVoice && echoTvVoice(" + JSONObject.quote(said.get(0)) + ")", null);
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
+        int code = e.getKeyCode();
+        if (code == KeyEvent.KEYCODE_SEARCH || code == KeyEvent.KEYCODE_VOICE_ASSIST) {
+            if (e.getAction() == KeyEvent.ACTION_UP) startVoiceSearch();
+            return true;
+        }
         if (e.getKeyCode() == KeyEvent.KEYCODE_BACK) {
             if (e.getAction() == KeyEvent.ACTION_UP) {
                 if (customView != null) { web.getWebChromeClient().onHideCustomView(); return true; }

@@ -1,5 +1,6 @@
 // Echo Music for Android TV: the same API server as the desktop app, plus the web UI, served
 // on 127.0.0.1 inside the TV app (Node.js for Mobile). Only the app's own WebView can reach it.
+import './intl-shim.ts'; // must run before the server modules load
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { serve } from '@hono/node-server';
