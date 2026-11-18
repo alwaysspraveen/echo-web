@@ -1,6 +1,5 @@
-// Listen Together: a shared-listening protocol, so laptops (web/desktop) and
-// phones can be in the same room. Protobuf messages in an Envelope over a WebSocket, on the same
-// public Listen Together servers. Wire format: protobuf (listentogether.proto).
+// Vibe: listen with friends in sync. Protobuf messages in an Envelope over a WebSocket, to Resona's
+// own Vibe server (Cloudflare). Wire format: protobuf (listentogether.proto).
 import protobuf from 'protobufjs';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -8,9 +7,8 @@ import { toast } from 'sonner';
 import type { Track } from '@resona/shared';
 import protoSource from './listentogether.proto?raw';
 
-/** Default room server and the published server list. */
-export const DEFAULT_LT_SERVER = 'wss://metroserverx.meowery.eu/ws';
-const SERVER_LIST_URL = 'https://raw.githubusercontent.com/EchoMusicApp/Echo-Music/refs/heads/main/app/server.json';
+/** Resona's Vibe server (resona-vibe on Cloudflare). */
+export const VIBE_SERVER = 'wss://resona-vibe.praveenkumar75566.workers.dev/ws';
 
 // ---------- wire format ----------
 
@@ -78,7 +76,7 @@ export interface Suggestion { id: string; from: string; track: LtTrack }
 export interface PlaybackAction { action: string; trackId?: string; position?: number; trackInfo?: LtTrack; insertNext?: boolean; queue?: LtTrack[]; queueTitle?: string; serverTime?: number }
 export interface RoomSnapshot { currentTrack?: LtTrack; isPlaying: boolean; position: number; lastUpdate: number; queue: LtTrack[] }
 
-interface Session { server: string; roomCode: string; userId: string; token: string; username: string }
+interface Session { roomCode: string; userId: string; token: string; username: string }
 
 interface LtState {
   session: Session | null;
@@ -88,10 +86,8 @@ interface LtState {
   requests: JoinRequest[];
   suggestions: Suggestion[];
   allowControl: boolean;
-  server: string;
   name: string;
   dialogOpen: boolean;
-  setServer: (s: string) => void;
   setDialogOpen: (o: boolean) => void;
 }
 
@@ -99,16 +95,15 @@ export const useLt = create<LtState>()(
   persist(
     (set) => ({
       session: null, status: 'idle', hostId: null, users: [], requests: [], suggestions: [], allowControl: false,
-      server: DEFAULT_LT_SERVER, name: '', dialogOpen: false,
-      setServer: (server) => set({ server: server.trim() || DEFAULT_LT_SERVER }),
+      name: '', dialogOpen: false,
       setDialogOpen: (dialogOpen) => set({ dialogOpen }),
     }),
-    { name: 'echo-listen-together', partialize: ({ session, server, name }) => ({ session, server, name }) },
+    { name: 'echo-listen-together', partialize: ({ session, name }) => ({ session, name }) },
   ),
 );
 
 export const ltIsHost = () => { const s = useLt.getState(); return !!s.session && s.hostId === s.session.userId; };
-/** The Listen Together server lets only the host control playback; guests suggest songs. */
+/** Only the host controls playback; guests suggest songs. */
 export const ltCanControl = () => ltIsHost();
 
 // Playback events go to the controller (ListenTogetherController.tsx), which drives the player.
@@ -141,14 +136,14 @@ async function onMessage(ev: MessageEvent) {
   const st = useLt.getState();
   switch (type) {
     case 'room_created': {
-      const session = { server: st.server, roomCode: p.roomCode, userId: p.userId, token: p.sessionToken, username: st.name || 'Host' };
+      const session = { roomCode: p.roomCode, userId: p.userId, token: p.sessionToken, username: st.name || 'Host' };
       useLt.setState({ session, status: 'live', hostId: p.userId, users: [{ userId: p.userId, username: session.username, isHost: true, isConnected: true }], requests: [] });
       pending?.resolve(p.roomCode); pending = null;
       listener?.onUserJoined(); // send our current song so the room has it
       break;
     }
     case 'join_approved': {
-      const session = { server: st.server, roomCode: p.roomCode, userId: p.userId, token: p.sessionToken, username: st.name || 'Guest' };
+      const session = { roomCode: p.roomCode, userId: p.userId, token: p.sessionToken, username: st.name || 'Guest' };
       useLt.setState({ session, status: 'live', requests: [] });
       if (p.state) applyRoomState(p.state, 'joined');
       pending?.resolve(p.roomCode); pending = null;
@@ -165,7 +160,7 @@ async function onMessage(ev: MessageEvent) {
     case 'join_request':
       if (ltIsHost()) {
         useLt.setState({ requests: [...st.requests.filter((r) => r.userId !== p.userId), { userId: p.userId, username: p.username }] });
-        toast(`${p.username} wants to join your Listen Together room`, { id: `lt-req-${p.userId}` });
+        toast(`${p.username} wants to join your Vibe`, { id: `lt-req-${p.userId}` });
       }
       break;
     case 'user_joined':
@@ -213,7 +208,7 @@ async function onMessage(ev: MessageEvent) {
       endLocally(`You were removed from the room${p.reason ? `: ${p.reason}` : ''}`);
       break;
     case 'error': {
-      const msg = p.message || p.code || 'Listen Together error';
+      const msg = p.message || p.code || 'Vibe error';
       if (p.code === 'not_host') {
         // The server refused our playback change: we don't have control. Follow the room again.
         useLt.setState({ allowControl: false });
@@ -222,7 +217,7 @@ async function onMessage(ev: MessageEvent) {
         break;
       }
       if (pending) { pending.reject(new Error(/not.?found|invalid.?room/i.test(msg) ? 'No room with that code' : msg)); pending = null; hangUp(); }
-      else if (/session|token|room.*(not|closed)/i.test(msg) && wanted?.kind === 'reconnect') endLocally('The Listen Together room has ended');
+      else if (/session|token|room.*(not|closed)/i.test(msg) && wanted?.kind === 'reconnect') endLocally('The Vibe has ended');
       else toast.error(msg);
       break;
     }
@@ -230,10 +225,9 @@ async function onMessage(ev: MessageEvent) {
 }
 
 function connect() {
-  const { server } = useLt.getState();
   clearTimeout(retryTimer);
   ws?.close();
-  const sock = new WebSocket(server);
+  const sock = new WebSocket(VIBE_SERVER);
   ws = sock;
   sock.binaryType = 'arraybuffer';
   sock.onopen = () => {
@@ -249,7 +243,7 @@ function connect() {
   sock.onclose = () => {
     if (ws !== sock) return; // replaced
     clearInterval(pingTimer);
-    if (pending) { pending.reject(new Error("Can't reach the Listen Together server. Check your internet connection.")); pending = null; wanted = null; useLt.setState({ status: 'idle' }); return; }
+    if (pending) { pending.reject(new Error("Can't reach the Vibe server. Check your internet connection.")); pending = null; wanted = null; useLt.setState({ status: 'idle' }); return; }
     if (!useLt.getState().session) return;
     // Lost connection mid-session: reconnect with our session token (backs off up to ~15 s).
     useLt.setState({ status: 'reconnecting' });
@@ -278,7 +272,7 @@ const begin = (kind: 'create' | 'join', code?: string) =>
     useLt.setState({ status: kind === 'join' ? 'waiting' : 'connecting', session: null, users: [], requests: [] });
     connect();
     window.setTimeout(() => {
-      if (pending) { pending.reject(new Error(kind === 'join' ? 'The host didn’t respond. Ask them to approve your request, then try again.' : 'The Listen Together server didn’t respond')); pending = null; hangUp(); useLt.setState({ status: 'idle' }); }
+      if (pending) { pending.reject(new Error(kind === 'join' ? 'The host didn’t respond. Ask them to approve your request, then try again.' : 'The Vibe server didn’t respond')); pending = null; hangUp(); useLt.setState({ status: 'idle' }); }
     }, kind === 'join' ? 90_000 : 15_000);
   });
 
@@ -290,7 +284,7 @@ export function resumeRoom() { if (useLt.getState().session && !ws) { wanted = {
 export function leaveRoom() {
   const host = ltIsHost();
   send('leave_room');
-  endLocally(host ? 'Listen Together ended' : 'You left the room');
+  endLocally(host ? 'Vibe ended' : 'You left the Vibe');
 }
 export function approve(userId: string) { send('approve_join', { userId }); useLt.setState({ requests: useLt.getState().requests.filter((r) => r.userId !== userId) }); }
 export function decline(userId: string) { send('reject_join', { userId, reason: 'Declined by host' }); useLt.setState({ requests: useLt.getState().requests.filter((r) => r.userId !== userId) }); }
@@ -308,12 +302,3 @@ export function sendAction(a: PlaybackAction) { send('playback_action', a as unk
 export function sendBufferReady(trackId: string) { send('buffer_ready', { trackId }); }
 export function requestSync() { send('request_sync'); }
 
-/** Picks up the published server list, so phones and laptops use the same default. */
-export async function refreshServerList() {
-  try {
-    const res = await fetch(SERVER_LIST_URL, { cache: 'no-store' });
-    const j = await res.json();
-    const url = (Array.isArray(j) ? j[0] : j)?.serverUrl;
-    if (typeof url === 'string' && url.startsWith('wss://') && useLt.getState().server === DEFAULT_LT_SERVER) useLt.setState({ server: url });
-  } catch { /* keep the built-in default */ }
-}

@@ -25,7 +25,7 @@ export function Sidebar() {
       <NavLink to="/explore" className={link}><Compass className="size-5" />Explore</NavLink>
       <NavLink to="/library" end className={link}><Library className="size-5" />Library</NavLink>
       <button onClick={openListenTogether} className={cn(link({ isActive: false }), jamCode && 'bg-seed/20 text-text')}>
-        <AudioWaveform className="size-5 shrink-0" /><span className="min-w-0 truncate whitespace-nowrap">Listen Together</span>
+        <AudioWaveform className="size-5 shrink-0" /><span className="min-w-0 truncate whitespace-nowrap">Vibe</span>
         {jamCode && <span className="ml-auto size-2 shrink-0 animate-pulse rounded-full bg-seed" title={`In room ${jamCode}`} aria-label={`In room ${jamCode}`} />}
       </button>
 

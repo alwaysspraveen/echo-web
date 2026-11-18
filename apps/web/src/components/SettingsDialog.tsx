@@ -3,7 +3,6 @@ import { Check, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { DOWNLOAD_OPTIONS, QUALITY_OPTIONS, useSettings } from '@/lib/settings';
 import { PRESETS } from '@/lib/theme';
-import { DEFAULT_LT_SERVER, useLt } from '@/lib/listenTogether';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useEq } from '@/player/equalizer';
@@ -140,11 +139,6 @@ export function SettingsDialog() {
           <p className="mb-3 text-sm text-text-muted">Every download includes the title, artist, album and cover art.</p>
           <Choice label="Download format" value={s.downloadFormat} options={DOWNLOAD_OPTIONS} onChange={s.setDownloadFormat} />
         </section>
-        <section className="mt-2">
-          <h3 className="mb-1 font-display text-lg font-bold">Listen Together server</h3>
-          <p className="mb-3 text-sm text-text-muted">A public room server, so phones and laptops can share rooms. It never carries audio.</p>
-          <JamServerField />
-        </section>
       </DialogContent>
     </Dialog>
   );
@@ -163,16 +157,6 @@ function Swatch({ label, selected, onClick, style, icon }: { label: string; sele
     >
       {selected && !icon ? <Check className="size-4 text-white drop-shadow" strokeWidth={3} /> : icon}
     </button>
-  );
-}
-
-function JamServerField() {
-  const { server, setServer } = useLt();
-  return (
-    <div className="flex gap-2">
-      <Input defaultValue={server} key={server} onBlur={(e) => setServer(e.target.value)} aria-label="Listen Together server URL" spellCheck={false} />
-      {server !== DEFAULT_LT_SERVER && <button onClick={() => setServer(DEFAULT_LT_SERVER)} className="shrink-0 rounded-full px-3 text-sm text-text-muted hover:bg-accent">Reset</button>}
-    </div>
   );
 }
 

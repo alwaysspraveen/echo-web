@@ -31,7 +31,7 @@ To play music, Resona talks to third-party services. They receive the request (a
 | **Audio extension servers** (FLAC and 320 kbps sources, Settings → Extensions) | When a song can be upgraded, or in FLAC Mode | The song's title, artist and length |
 | **LRCLIB** (lrclib.net) | Showing lyrics | The song's title, artist and length |
 | **Apple Music** (public catalog) | Canvas motion artwork, if on | The song's title and artist |
-| **Listen Together server** | Only while you're in a room | The room code, the name you enter, and what's playing in the room |
+| **Vibe server** (Resona's own, on Cloudflare) | Only while you're in a Vibe | The room code, the name you enter, and what's playing in the room. Nothing is stored: a room disappears when everyone leaves |
 | **GitHub** | Checking for updates (desktop) | Only the request for the latest version |
 | **Cast devices on your Wi-Fi** | Only while casting (desktop) | The song and its artwork, sent to your own TV or speaker |
 | **Voice search** | Only when you press the mic | Web (Chrome): your voice is sent to Google's speech service. Desktop: recognized **on your computer**; the voice model is downloaded once from Hugging Face, and no audio leaves your device |

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import type { Track } from '@resona/shared';
 import {
-  fromLt, ltCanControl, ltIsHost, requestSync, suggest, resumeRoom, refreshServerList, sendAction, sendBufferReady, setLtListener, toLt,
+  fromLt, ltCanControl, ltIsHost, requestSync, suggest, resumeRoom, sendAction, sendBufferReady, setLtListener, toLt,
   useLt, type LtTrack, type PlaybackAction, type RoomSnapshot,
 } from '@/lib/listenTogether';
 import { audio, isInternalSeek, seek } from '@/player/audio';
@@ -136,13 +136,12 @@ function announceCurrent() {
 }
 
 /**
- * Bridges the local player and a Listen Together room (works with phones too). Renders nothing.
+ * Bridges the local player and a Vibe room. Renders nothing.
  */
 export function ListenTogetherController() {
   const active = useLt((s) => !!s.session);
 
   useEffect(() => {
-    refreshServerList();
     resumeRoom();
     setLtListener({
       onDenied: () => { setPlayer({ playing: roomPlaying }); requestSync(); },

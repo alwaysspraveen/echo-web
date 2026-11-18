@@ -35,7 +35,7 @@ These always get the newest version. Installed apps update themselves (Settings 
 - **Lossless FLAC**: songs upgrade to FLAC automatically when available. **FLAC Mode** (top bar or Settings) plays only FLAC and searches only FLAC songs.
 - **Synced lyrics** in the side panel and the full-screen Now Playing view.
 - **Cast** to Chromecast, Google TV, Android TV and Nest speakers (desktop app). The laptop becomes the remote.
-- **Listen Together**: share a room code and everyone hears the same song at the same moment.
+- **Vibe**: share a room code and everyone hears the same song at the same moment.
 - **Offline downloads** and **MP3 320 kbps** files.
 - **Equalizer** (10 bands, presets, bass, treble, volume boost) and **spatial audio**.
 - **Explore**: charts, moods & genres and podcasts. **Video mode**, **Canvas** motion artwork, **crossfade**.

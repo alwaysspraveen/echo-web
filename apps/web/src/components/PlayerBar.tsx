@@ -139,7 +139,7 @@ export function PlayerBar() {
         <IconButton label="Equalizer" active={eqOn} onClick={() => useEq.getState().set({ open: true })}>
           <SlidersVertical className="size-[18px]" />
         </IconButton>
-        <IconButton label="Listen Together" active={inJam} onClick={() => (inJam ? togglePanel('jam') : openListenTogether())}>
+        <IconButton label="Vibe" active={inJam} onClick={() => (inJam ? togglePanel('jam') : openListenTogether())}>
           <AudioWaveform className="size-[18px]" />
         </IconButton>
         <CastButton />

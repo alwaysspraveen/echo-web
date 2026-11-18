@@ -18,9 +18,9 @@ You'll get a reply within 7 days. Once a fix ships, you'll be credited in the re
 
 ## Scope
 
-In scope: the desktop app, its built-in server, the web app, and the update mechanism.
+In scope: the desktop app, its built-in server, the web app, the Vibe server, and the update mechanism.
 
-Out of scope: third-party services Resona connects to (YouTube Music, extension servers, LRCLIB, Apple Music, Listen Together servers). Report those to their owners.
+Out of scope: third-party services Resona connects to (YouTube Music, extension servers, LRCLIB, Apple Music). Report those to their owners.
 
 ## How Resona limits risk
 

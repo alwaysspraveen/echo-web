@@ -58,7 +58,7 @@ export function SidePanel() {
   const inJam = useLt((s) => !!s.session);
   if (!panel) return null;
   return (
-    <aside className="flex w-[340px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-glass xl:w-[380px]" aria-label={panel === 'queue' ? 'Queue' : panel === 'jam' ? 'Listen Together' : 'Lyrics'}>
+    <aside className="flex w-[340px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-glass xl:w-[380px]" aria-label={panel === 'queue' ? 'Queue' : panel === 'jam' ? 'Vibe' : 'Lyrics'}>
       <div className="flex items-center gap-1 p-2">
         {(inJam ? (['queue', 'lyrics', 'jam'] as const) : (['queue', 'lyrics'] as const)).map((p) => (
           <button
@@ -67,7 +67,7 @@ export function SidePanel() {
             aria-pressed={panel === p}
             className={cn('h-9 rounded-full px-4 text-sm font-semibold capitalize', panel === p ? 'bg-text text-bg' : 'text-text-muted hover:bg-accent hover:text-text')}
           >
-            {p === 'jam' ? 'Together' : p}
+            {p === 'jam' ? 'Vibe' : p}
           </button>
         ))}
         <button onClick={() => setPanel(null)} className="ml-auto grid size-9 place-items-center rounded-full text-text-muted hover:bg-accent hover:text-text" aria-label="Close panel">
