@@ -2,6 +2,17 @@
 
 A laptop web version of [Echo Music](https://github.com/EchoMusicApp/Echo-Music): stream YouTube Music without ads, with synced lyrics, a play queue and a local library.
 
+![Echo Music home](docs/screenshots/home.jpg)
+
+| | |
+|---|---|
+| ![Now playing with synced lyrics](docs/screenshots/now-playing.jpg) | ![Search with suggestions](docs/screenshots/search.jpg) |
+| **Now playing** with synced lyrics and lossless FLAC | **Search** with songs, artists and playlists as you type |
+| ![Album and queue](docs/screenshots/player.jpg) | ![Explore charts](docs/screenshots/explore.jpg) |
+| **Albums and the play queue** | **Explore**: charts, moods and podcasts |
+| ![Equalizer](docs/screenshots/equalizer.jpg) | |
+| **Equalizer** with volume boost, bass and treble | |
+
 ## Run it
 
 Needs **Node.js 22 or newer** (`node -v` to check; get it from https://nodejs.org). Works on macOS, Windows and Linux.
