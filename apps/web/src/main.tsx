@@ -6,8 +6,10 @@ import App from './App';
 import './index.css';
 import { initOffline } from './lib/offline';
 import { initEqualizer } from './player/equalizer';
+import { initTv } from './lib/tv';
 
 initOffline();
+initTv();
 initEqualizer();
 
 // Inside the Echo desktop app on macOS the title bar is hidden; see .desktop-mac in index.css.

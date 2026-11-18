@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Mic, Play, Search, X } from 'lucide-react';
 import { cancelVoice, listen, stopVoice, useVoice } from '@/voice/voiceSearch';
+import { isTv } from '@/lib/tv';
 import type { Card } from '@echo/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,7 +118,7 @@ export function TopBar() {
               <X className="size-4" />
             </button>
           )}
-          <button
+          {!isTv && <button
             type="button"
             onClick={startVoice}
             aria-label={voice.phase === 'listening' ? 'Stop listening' : 'Search with your voice'}
@@ -126,7 +127,7 @@ export function TopBar() {
             className={cn('grid size-8 place-items-center rounded-full', voiceBusy ? 'bg-seed text-white' : 'text-text-faint hover:bg-accent hover:text-text')}
           >
             <Mic className="size-[18px]" />
-          </button>
+          </button>}
         </div>
         {(voiceBusy || voice.phase === 'error') && <VoicePanel />}
         {showList && (

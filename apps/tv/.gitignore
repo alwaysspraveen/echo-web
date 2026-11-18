@@ -1,0 +1,12 @@
+# Built or downloaded; recreated by build.sh
+android/app/libnode/
+android/app/src/main/assets/
+android/app/build/
+android/app/.cxx/
+android/build/
+android/.gradle/
+android/local.properties
+.cache/
+# Signing key: keep a private backup; updates must be signed with the same key
+android/echo-tv.keystore
+android/signing.properties
