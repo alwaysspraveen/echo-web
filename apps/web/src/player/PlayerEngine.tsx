@@ -88,7 +88,7 @@ export function PlayerEngine() {
           audio.src = ext.url;
           onExtension.current = true;
           setSource(sourceFromStream({ format: 'flac', ...ext }));
-          if (!restoring || usePlayer.getState().playing) audio.play().catch(() => {});
+          if (usePlayer.getState().playing) audio.play().catch(() => {}); // a song loaded paused (e.g. in a Vibe) stays paused
         });
         document.title = `${track.title} · ${artistLine(track.artists)}`;
         return;
@@ -136,7 +136,7 @@ export function PlayerEngine() {
       loadedQuality.current = useSettings.getState().quality;
       if (blob) audio.src = offlineUrl.current = URL.createObjectURL(blob);
       else audio.src = streamUrl(id, loadedQuality.current);
-      if (!restoring || usePlayer.getState().playing) audio.play().catch(() => {});
+      if (usePlayer.getState().playing) audio.play().catch(() => {}); // a song loaded paused (e.g. in a Vibe) stays paused
     });
     document.title = `${track.title} · ${artistLine(track.artists)}`;
   }, [track]);

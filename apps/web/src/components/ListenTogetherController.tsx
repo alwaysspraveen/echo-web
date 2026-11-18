@@ -52,11 +52,18 @@ const isOwnMessage = (a: PlaybackAction) =>
 const posMs = () => Math.round((audio.currentTime || 0) * 1000);
 const current = () => { const p = usePlayer.getState(); return p.index >= 0 ? p.queue[p.index] : undefined; };
 
+// True from when we switch the player to another song until that song's audio has loaded. Until
+// then the element still holds the previous song, so seeking it would be lost.
+let switchingTrack = false;
+/** Run once the *current* song can seek (waits for a song we just switched to). */
+const whenSeekable = (fn: () => void) => {
+  if (!switchingTrack && audio.readyState >= HTMLMediaElement.HAVE_METADATA) fn();
+  else audio.addEventListener('loadedmetadata', fn, { once: true });
+};
+
 /** Seek once the current song can seek. `target` may be a function evaluated at that moment. */
 function seekWhenReady(target: () => number) {
-  const go = () => { const t = target() + (ltIsHost() ? 0 : outputDelay()); if (Math.abs(audio.currentTime - t) > 0.3) { ourSeekAt = now(); seek(t + (ltIsHost() ? 0 : seekCost)); } };
-  if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) go();
-  else audio.addEventListener('loadedmetadata', go, { once: true });
+  whenSeekable(() => { const t = target() + (ltIsHost() ? 0 : outputDelay()); if (Math.abs(audio.currentTime - t) > 0.3) { ourSeekAt = now(); seek(t + (ltIsHost() ? 0 : seekCost)); } });
 }
 
 /** Tell the server when the new song has loaded (the host waits for everyone before playing). */
@@ -65,6 +72,18 @@ function reportBuffered(trackId: string) {
   const ready = () => { if (bufferFor === trackId && current()?.id === trackId) { sendBufferReady(trackId); bufferFor = null; } };
   if (audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA && current()?.id === trackId) ready();
   else audio.addEventListener('canplay', ready, { once: true });
+}
+
+/** Start playing at the room's position: jump there first (once the song can seek), then play,
+ *  so the start of the song is never heard. */
+function playAt(target: () => number) {
+  const go = () => {
+    const t = target() + (ltIsHost() ? 0 : outputDelay());
+    if (Math.abs(audio.currentTime - t) > 0.3) { ourSeekAt = now(); seek(t + (ltIsHost() ? 0 : seekCost)); }
+    setPlayer({ playing: true });
+  };
+  if (!switchingTrack && audio.readyState >= HTMLMediaElement.HAVE_METADATA) go();
+  else { setPlayer({ playing: false }); whenSeekable(go); }
 }
 
 function setPlayer(patch: Partial<ReturnType<typeof usePlayer.getState>>) {
@@ -77,6 +96,11 @@ function loadQueue(track: LtTrack, queue: LtTrack[] | undefined, playing: boolea
   let index = q.findIndex((t) => t.id === track.id);
   if (index === -1) { q = [fromLt(track), ...q]; index = 0; }
   const p = usePlayer.getState();
+  if (current()?.id !== track.id && !switchingTrack) {
+    // Registered first, so it clears before any seek waiting on the same event runs.
+    switchingTrack = true;
+    audio.addEventListener('loadedmetadata', () => { switchingTrack = false; }, { once: true });
+  }
   if (ids(p.queue) === ids(q) && p.index === index) setPlayer({ playing });
   else setPlayer({ queue: q, index, playing, unshuffled: null, shuffle: false, radioFor: null });
   reportBuffered(track.id);
@@ -86,8 +110,9 @@ function applySnapshot(s: RoomSnapshot) {
   if (!s.currentTrack) return;
   roomPlaying = s.isPlaying;
   setRef(s.currentTrack.id, s.position, s.lastUpdate);
-  loadQueue(s.currentTrack, s.queue, s.isPlaying);
-  seekWhenReady(() => hostPosition() ?? s.position / 1000);
+  loadQueue(s.currentTrack, s.queue, false);
+  if (s.isPlaying) playAt(() => hostPosition() ?? s.position / 1000);
+  else seekWhenReady(() => s.position / 1000);
 }
 
 function applyAction(a: PlaybackAction) {
@@ -103,8 +128,7 @@ function applyAction(a: PlaybackAction) {
     case 'play': {
       roomPlaying = true;
       setRef(a.trackId, a.position ?? posMs(), a.serverTime);
-      setPlayer({ playing: true });
-      seekWhenReady(() => hostPosition() ?? 0);
+      playAt(() => hostPosition() ?? 0);
       break;
     }
     case 'pause':
@@ -123,7 +147,7 @@ function applyAction(a: PlaybackAction) {
       // Host heartbeat: its exact position. The drift loop below steers toward it.
       if (a.trackId && current()?.id !== a.trackId) break;
       setRef(a.trackId, a.position ?? 0, a.serverTime);
-      if (!roomPlaying) { roomPlaying = true; setPlayer({ playing: true }); seekWhenReady(() => hostPosition() ?? 0); }
+      if (!roomPlaying) { roomPlaying = true; playAt(() => hostPosition() ?? 0); }
       break;
     case 'sync_queue':
       if (a.queue?.length) {
