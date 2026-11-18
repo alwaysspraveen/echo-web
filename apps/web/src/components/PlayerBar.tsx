@@ -16,6 +16,8 @@ import { useCurrentTrack, usePlayer, useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
 import { Artwork } from './Artwork';
 import { PlayPauseButton } from './PlayPauseButton';
+import { CastDeviceIcon } from './CastDialogs';
+import { castBridge, openCast, useCast } from '@/lib/cast';
 import { ArtistLinks } from './TrackList';
 
 function IconButton({ label, active, className, children, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string; active?: boolean }) {
@@ -137,6 +139,7 @@ export function PlayerBar() {
         <IconButton label="Listen Together" active={inJam} onClick={() => (inJam ? togglePanel('jam') : openListenTogether())}>
           <AudioWaveform className="size-[18px]" />
         </IconButton>
+        <CastButton />
         <IconButton label="Lyrics" active={panel === 'lyrics'} onClick={() => togglePanel('lyrics')}>
           <MicVocal className="size-[18px]" />
         </IconButton>
@@ -149,5 +152,17 @@ export function PlayerBar() {
         <Slider aria-label="Volume" value={[s.muted ? 0 : s.volume]} max={1} step={0.01} onValueChange={([v]) => s.setVolume(v)} className="w-24 py-2 xl:w-28" />
       </div>
     </div>
+  );
+}
+
+/** Cast button (Echo for Android's CastButton): device picker, or the session when casting. */
+function CastButton() {
+  const status = useCast((s) => s.status);
+  if (!castBridge) return null;
+  const casting = status.state !== 'idle';
+  return (
+    <IconButton label={casting ? `Casting to ${status.device?.name ?? 'device'}` : 'Cast'} active={casting} onClick={openCast} className={cn(status.state === 'connecting' && 'animate-pulse')}>
+      <CastDeviceIcon kind={casting ? status.device?.kind : undefined} className="size-[18px]" />
+    </IconButton>
   );
 }
