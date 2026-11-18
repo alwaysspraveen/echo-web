@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import type { Track } from '@resona/shared';
 import {
-  fromLt, ltCanControl, ltIsHost, requestSync, suggest, resumeRoom, sendAction, sendBufferReady, setLtListener, toLt,
+  fromLt, ltCanControl, ltIsHost, requestSync, suggest, resumeRoom, sendAction, sendBufferReady, serverNow, setLtListener, syncClock, toLt,
   useLt, type LtTrack, type PlaybackAction, type RoomSnapshot,
 } from '@/lib/listenTogether';
 import { audio, isInternalSeek, seek } from '@/player/audio';
@@ -20,6 +20,11 @@ let bufferFor: string | null = null;
 let ourSeekAt = 0;
 // The room's play state as we last heard it, to restore if the server refuses our change.
 let roomPlaying = false;
+// Where the host is: `base` ms into `trackId` at server time `at`. Guests steer toward this.
+let roomRef: { trackId?: string; base: number; at: number } | null = null;
+const setRef = (trackId: string | undefined, base: number, at: number | undefined) => { roomRef = { trackId: trackId ?? current()?.id, base, at: at || serverNow() }; };
+/** Where the host is right now, in seconds (on the shared server clock). */
+const hostPosition = () => (roomRef ? (roomRef.base + (roomPlaying ? Math.max(0, serverNow() - roomRef.at) : 0)) / 1000 : null);
 
 function send(a: PlaybackAction) {
   sent = [...sent.filter((s) => now() - s.at < 4000), { action: a.action, trackId: a.trackId, position: a.position, at: now() }];
@@ -34,7 +39,7 @@ const current = () => { const p = usePlayer.getState(); return p.index >= 0 ? p.
 
 /** Seek once the current song can seek. `target` may be a function evaluated at that moment. */
 function seekWhenReady(target: () => number) {
-  const go = () => { const t = target(); if (Math.abs(audio.currentTime - t) > 1.5) { ourSeekAt = now(); seek(t); } };
+  const go = () => { const t = target(); if (Math.abs(audio.currentTime - t) > 0.3) { ourSeekAt = now(); seek(t); } };
   if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) go();
   else audio.addEventListener('loadedmetadata', go, { once: true });
 }
@@ -65,8 +70,9 @@ function loadQueue(track: LtTrack, queue: LtTrack[] | undefined, playing: boolea
 function applySnapshot(s: RoomSnapshot) {
   if (!s.currentTrack) return;
   roomPlaying = s.isPlaying;
+  setRef(s.currentTrack.id, s.position, s.lastUpdate);
   loadQueue(s.currentTrack, s.queue, s.isPlaying);
-  seekWhenReady(() => (s.position + (s.isPlaying ? Math.max(0, now() - s.lastUpdate) : 0)) / 1000);
+  seekWhenReady(() => hostPosition() ?? s.position / 1000);
 }
 
 function applyAction(a: PlaybackAction) {
@@ -74,28 +80,36 @@ function applyAction(a: PlaybackAction) {
   const p = usePlayer.getState();
   switch (a.action) {
     case 'change_track':
+      // Load the song but wait: playback starts when the host's copy actually starts ('play').
       roomPlaying = false;
+      roomRef = null;
       if (a.trackInfo?.id) { loadQueue(a.trackInfo, a.queue, false); seekWhenReady(() => (a.position ?? 0) / 1000); }
       break;
     case 'play': {
-      const base = a.position ?? posMs();
-      const at = a.serverTime || now();
       roomPlaying = true;
+      setRef(a.trackId, a.position ?? posMs(), a.serverTime);
       setPlayer({ playing: true });
-      seekWhenReady(() => (base + Math.max(0, now() - at)) / 1000);
+      seekWhenReady(() => hostPosition() ?? 0);
       break;
     }
     case 'pause':
       roomPlaying = false;
+      roomRef = null;
+      audio.playbackRate = 1;
       setPlayer({ playing: false });
       if (a.position != null) seekWhenReady(() => a.position! / 1000);
       break;
     case 'seek': {
-      const base = a.position ?? 0;
-      const at = a.serverTime || now();
-      seekWhenReady(() => (base + (p.playing ? Math.max(0, now() - at) : 0)) / 1000);
+      setRef(a.trackId, a.position ?? 0, a.serverTime);
+      seekWhenReady(() => hostPosition() ?? 0);
       break;
     }
+    case 'tick':
+      // Host heartbeat: its exact position. The drift loop below steers toward it.
+      if (a.trackId && current()?.id !== a.trackId) break;
+      setRef(a.trackId, a.position ?? 0, a.serverTime);
+      if (!roomPlaying) { roomPlaying = true; setPlayer({ playing: true }); seekWhenReady(() => hostPosition() ?? 0); }
+      break;
     case 'sync_queue':
       if (a.queue?.length) {
         const cur = current();
@@ -184,8 +198,8 @@ export function ListenTogetherController() {
 
       if (trackChanged && s.index >= 0) {
         const t = s.queue[s.index];
+        // Everyone loads the song; 'play' goes out when our copy actually starts (see onPlaying).
         send({ action: 'change_track', trackId: t.id, trackInfo: toLt(t), queue: s.queue.map(toLt), queueTitle: 'Resona', position: 0 });
-        if (s.playing) send({ action: 'play', position: 0 });
         return;
       }
       if (queueChanged) send({ action: 'sync_queue', queue: s.queue.map(toLt), queueTitle: 'Resona' });
@@ -194,7 +208,44 @@ export function ListenTogetherController() {
     // User seeks (not the ones we make to follow the room).
     const onSeeked = () => { if (!applying && !isInternalSeek() && now() - ourSeekAt > 1200 && ltCanControl()) send({ action: 'seek', position: posMs() }); };
     audio.addEventListener('seeked', onSeeked);
-    return () => { unsub(); audio.removeEventListener('seeked', onSeeked); };
+
+    // Host: the moment our audio really starts (new song loaded, after buffering, after a FLAC
+    // switch), tell everyone our exact position, so they start/align with what we actually hear.
+    const onPlaying = () => {
+      const t = current();
+      if (ltIsHost() && t) send({ action: 'play', trackId: t.id, position: posMs() });
+    };
+    audio.addEventListener('playing', onPlaying);
+    // Host heartbeat every 3 s while playing.
+    const beat = window.setInterval(() => {
+      const t = current();
+      if (ltIsHost() && t && !audio.paused && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) sendAction({ action: 'tick', trackId: t.id, position: posMs() });
+    }, 3000);
+    // Guests: steer toward the host. Small drift → play up to 5% faster/slower (inaudible) until
+    // aligned; more than 1 s off → jump.
+    const steer = window.setInterval(() => {
+      if (ltIsHost()) { if (audio.playbackRate !== 1) audio.playbackRate = 1; return; }
+      const target = hostPosition();
+      if (target === null || !roomPlaying || roomRef?.trackId !== current()?.id || audio.paused || audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+        if (audio.playbackRate !== 1) audio.playbackRate = 1;
+        return;
+      }
+      const diff = target - audio.currentTime; // + means we're behind
+      if (Math.abs(diff) > 1) { ourSeekAt = now(); audio.playbackRate = 1; seek(target); }
+      else if (Math.abs(diff) > 0.04) audio.playbackRate = 1 + Math.max(-0.05, Math.min(0.05, diff * 0.6));
+      else if (audio.playbackRate !== 1) audio.playbackRate = 1;
+    }, 400);
+    syncClock();
+    const clock = window.setInterval(syncClock, 60_000);
+
+    return () => {
+      unsub();
+      audio.removeEventListener('seeked', onSeeked);
+      audio.removeEventListener('playing', onPlaying);
+      clearInterval(beat); clearInterval(steer); clearInterval(clock);
+      audio.playbackRate = 1;
+      roomRef = null;
+    };
   }, [active]);
 
   return null;

@@ -57,8 +57,12 @@ export function PlayerEngine() {
       if (loadedId.current !== id) return; // user already moved on
       setSource({ label: blob ? 'Downloaded' : null });
       onExtension.current = false;
+      // In a Vibe everyone plays the same YouTube Music audio: FLAC / 320 kbps versions can be a
+      // different release (other intro or length) and switching mid-song causes hiccups, both of
+      // which would put people out of sync. FLAC Mode applies again after the Vibe.
+      const inVibe = !!useLt.getState().session;
       // FLAC Mode (or a song from the FLAC catalog): play only the FLAC version, never YouTube.
-      if (!blob && (useSettings.getState().flacMode || track.flac)) {
+      if (!blob && ((useSettings.getState().flacMode && !inVibe) || track.flac)) {
         if (offlineUrl.current) { const old = offlineUrl.current; setTimeout(() => URL.revokeObjectURL(old), 20_000); offlineUrl.current = null; }
         switching.current = true;
         audio.removeAttribute('src');
@@ -95,7 +99,7 @@ export function PlayerEngine() {
       // Always FLAC lossless first, then 320 kbps, then any others; YouTube if none has the song.
       const rank = (b: string) => { const i = DEFAULT_EXTENSIONS.findIndex((d) => d.base === b); return i === -1 ? DEFAULT_EXTENSIONS.length : i; };
       const bases = extensions.filter((e) => e.enabled).map((e) => e.base).sort((x, y) => rank(x) - rank(y));
-      if (!blob && preferExtension && bases.length && quality !== 'low') {
+      if (!blob && !inVibe && preferExtension && bases.length && quality !== 'low') {
         const isFlac = (e: { format?: string; codec?: string | null; quality?: string; audioQuality?: string } | null) =>
           !!e && /flac|lossless|hi_?res/i.test([e.format, e.codec, e.quality, e.audioQuality].join(' '));
         resolveExtensionStream(track, bases).catch(() => null).then((ext) => {

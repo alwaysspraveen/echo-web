@@ -10,6 +10,29 @@ import protoSource from './listentogether.proto?raw';
 /** Resona's Vibe server (resona-vibe on Cloudflare). */
 export const VIBE_SERVER = 'wss://resona-vibe.praveenkumar75566.workers.dev/ws';
 
+// ---------- clock sync ----------
+// Positions in a Vibe are stamped with the server's clock. Each device measures how far its own
+// clock is from the server's (NTP-style: several round trips, keep the fastest one), so "where the
+// host is right now" is computed on the same clock everywhere.
+let clockOffset = 0; // server time − local time, ms
+let clockSyncedAt = 0;
+export const serverNow = () => Date.now() + clockOffset;
+export async function syncClock() {
+  if (Date.now() - clockSyncedAt < 60_000) return;
+  const url = VIBE_SERVER.replace(/^wss:/, 'https:').replace(/\/ws$/, '/time');
+  let best: { rtt: number; offset: number } | null = null;
+  for (let i = 0; i < 6; i++) {
+    try {
+      const t0 = Date.now();
+      const { now } = (await (await fetch(url, { cache: 'no-store' })).json()) as { now: number };
+      const t1 = Date.now();
+      const sample = { rtt: t1 - t0, offset: now + (t1 - t0) / 2 - t1 };
+      if (!best || sample.rtt < best.rtt) best = sample;
+    } catch { /* try the next sample */ }
+  }
+  if (best) { clockOffset = best.offset; clockSyncedAt = Date.now(); }
+}
+
 // ---------- wire format ----------
 
 const root = protobuf.parse(protoSource, { keepCase: false }).root;
@@ -98,7 +121,7 @@ export const useLt = create<LtState>()(
       name: '', dialogOpen: false,
       setDialogOpen: (dialogOpen) => set({ dialogOpen }),
     }),
-    { name: 'echo-listen-together', partialize: ({ session, name }) => ({ session, name }) },
+    { name: 'echo-listen-together', partialize: ({ session, name, hostId }) => ({ session, name, hostId }) },
   ),
 );
 
