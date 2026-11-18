@@ -3,7 +3,7 @@ import { HardDriveDownload, Play, Shuffle } from 'lucide-react';
 import { saveAllOffline } from '@/lib/offline';
 import type { Track } from '@echo/shared';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingIndicator } from '@/components/ui/loading-indicator';
 import { usePlayer } from '@/player/store';
 import { cn } from '@/lib/utils';
 import { Artwork } from './Artwork';
@@ -18,32 +18,16 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   );
 }
 
-export function ShelvesSkeleton() {
+/** Page loading, like Echo for Android's ContainedLoadingIndicator. */
+function PageLoading() {
   return (
-    <div aria-label="Loading" className="px-2.5">
-      {[0, 1, 2].map((r) => (
-        <div key={r} className="mb-10">
-          <Skeleton className="mb-4 h-7 w-56" />
-          <div className="flex gap-5 overflow-hidden">
-            {Array.from({ length: 7 }, (_, i) => <Skeleton key={i} className="aspect-square w-44 shrink-0 rounded-2xl" />)}
-          </div>
-        </div>
-      ))}
+    <div className="grid min-h-[50vh] place-items-center">
+      <LoadingIndicator contained />
     </div>
   );
 }
-
-export function CollectionSkeleton() {
-  return (
-    <div aria-label="Loading">
-      <div className="flex items-end gap-7 px-2">
-        <Skeleton className="size-56 rounded-[24px]" />
-        <div className="flex-1 space-y-3 pb-3"><Skeleton className="h-12 w-2/3" /><Skeleton className="h-5 w-1/3" /></div>
-      </div>
-      <div className="mt-10 space-y-3 px-2">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-12" />)}</div>
-    </div>
-  );
-}
+export const ShelvesSkeleton = PageLoading;
+export const CollectionSkeleton = PageLoading;
 
 /** Header for albums and playlists: artwork, big title, play + shuffle. */
 export function CollectionHeader({

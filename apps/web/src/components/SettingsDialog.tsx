@@ -73,6 +73,7 @@ export function SettingsDialog() {
         </section>
 
         <AppUpdates />
+        <p className="mt-4 text-center text-xs text-text-faint">Echo Music for desktop · Developed by Praveen Kumar</p>
 
         <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Canvas</h3>

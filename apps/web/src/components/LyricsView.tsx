@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '@/components/ui/loading-indicator';
 import { useEffect, useRef, useState } from 'react';
 import { activeLineIndex, type Track } from '@echo/shared';
 import { useLyrics } from '@/lib/api';
@@ -83,12 +84,10 @@ function SyncedLines({ lines, size, source }: { lines: NonNullable<ReturnType<ty
   );
 }
 
-function LyricsSkeleton({ size }: { size: 'panel' | 'stage' }) {
+function LyricsSkeleton(_: { size: 'panel' | 'stage' }) {
   return (
-    <div className="flex flex-col gap-4 px-6 py-[20vh]" aria-label="Loading lyrics">
-      {[80, 60, 72, 50, 66].map((w, i) => (
-        <div key={i} className={cn('animate-pulse rounded-lg bg-glass', size === 'stage' ? 'h-10' : 'h-7')} style={{ width: `${w}%` }} />
-      ))}
+    <div className="grid place-items-center py-[20vh]">
+      <LoadingIndicator contained label="Loading lyrics" />
     </div>
   );
 }

@@ -48,6 +48,7 @@ export function Sidebar() {
       <button onClick={() => useSettings.getState().setSettingsOpen(true)} className={link({ isActive: false })}>
         <Settings className="size-5" />Settings
       </button>
+      <p className="px-3 pt-1 text-[11px] text-text-faint">Developed by Praveen Kumar</p>
     </nav>
   );
 }

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Minimize, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { Minimize, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { PlayPauseButton } from './PlayPauseButton';
+import { LoadingIndicator } from '@/components/ui/loading-indicator';
 import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/player/audio';
 import { useCurrentTrack, usePlayer } from '@/player/store';
 import { cn } from '@/lib/utils';
@@ -94,7 +95,7 @@ export function VideoFullscreenControls({ target }: { target: React.RefObject<HT
 
   return (
     <div className={cn('pointer-events-none absolute inset-0 transition-opacity duration-300', visible ? 'opacity-100' : 'opacity-0')}>
-      {buffering && <Loader2 className="absolute top-1/2 left-1/2 size-12 -translate-1/2 animate-spin text-white/80" />}
+      {buffering && <LoadingIndicator contained className="absolute top-1/2 left-1/2 -translate-1/2" label="Buffering" />}
 
       <div className="pointer-events-auto absolute inset-x-0 top-0 bg-gradient-to-b from-black/75 to-transparent px-8 pt-6 pb-16">
         <p className="truncate font-display text-2xl font-bold text-white">{track?.title}</p>

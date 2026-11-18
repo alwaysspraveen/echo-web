@@ -59,6 +59,8 @@ export function paletteFromSeed(seed: string): Record<string, string> {
     '--text-faint': hsl(h, tint(8), 59),
     '--seed': hsl(h, Math.max(s0, chroma ? 55 : 0), accentL),
     '--seed-soft': hsl(h, chroma ? 100 : 0, 85),
+    '--primary-container': hsl(h, chroma ? 65 : 0, 30),
+    '--on-primary-container': hsl(h, chroma ? 100 : 0, 93),
     '--line': hsl(h, tint(40), 93, 0.1),
   };
 }
