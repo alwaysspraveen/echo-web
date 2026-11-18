@@ -83,13 +83,32 @@ export const useLyrics = (track: Track | undefined) =>
 
 export interface ExtensionStream { url: string; format?: string; quality?: string; streamQuality?: string; audioQuality?: string; codec?: string | null }
 
-/** Asks each enabled extension (in order) for a high-quality stream of the track. */
+/** Loads a stream in a hidden player and resolves true only if it actually starts (can play) in time. */
+function playsWithin(url: string, ms: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probe = new Audio();
+    probe.preload = 'auto';
+    probe.muted = true;
+    const done = (ok: boolean) => { clearTimeout(timer); probe.removeAttribute('src'); probe.load(); resolve(ok); };
+    const timer = setTimeout(() => done(false), ms);
+    probe.addEventListener('canplay', () => done(true), { once: true });
+    probe.addEventListener('error', () => done(false), { once: true });
+    probe.src = url;
+  });
+}
+
+/**
+ * Asks each enabled extension (in order: FLAC, then 320 kbps) for the track, and returns the first
+ * stream that really plays. A source that answers but stalls is skipped.
+ */
 export async function resolveExtensionStream(track: Track, bases: string[]): Promise<ExtensionStream | null> {
   for (const base of bases) {
     const p = new URLSearchParams({ base, title: track.title, artist: track.artists.map((a) => a.name).join(', ') });
     if (track.duration) p.set('duration', String(Math.round(track.duration)));
     const res = await fetch(`/api/extension/resolve?${p}`, { signal: AbortSignal.timeout(15000) }).catch(() => null);
-    if (res?.ok) return res.json();
+    if (!res?.ok) continue;
+    const stream: ExtensionStream = await res.json();
+    if (stream?.url && (await playsWithin(stream.url, 6000))) return stream;
   }
   return null;
 }

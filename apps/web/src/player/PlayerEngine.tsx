@@ -200,6 +200,14 @@ export function PlayerEngine() {
     const onPlay = () => { switching.current = false; errorStreak.current = 0; if (!st().playing) st().setPlaying(true); };
     const onLoaded = () => { switching.current = false; };
     const onPause = () => { if (!switching.current && st().playing && !audio.ended) st().setPlaying(false); };
+    let lastProgress = { t: -1, at: Date.now() };
+    const watchdog = window.setInterval(() => {
+      if (!onExtension.current || !st().playing || audio.paused === false && audio.currentTime !== lastProgress.t) {
+        lastProgress = { t: audio.currentTime, at: Date.now() };
+        return;
+      }
+      if (Date.now() - lastProgress.at > 8000) { lastProgress = { t: -1, at: Date.now() }; onError(); }
+    }, 1000);
     const onError = () => {
       switching.current = false;
       if (!audio.getAttribute('src')) return;
@@ -231,6 +239,7 @@ export function PlayerEngine() {
     audio.addEventListener('error', onError);
     audio.addEventListener('loadeddata', onLoaded);
     return () => {
+      clearInterval(watchdog);
       audio.removeEventListener('loadeddata', onLoaded);
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('play', onPlay);
