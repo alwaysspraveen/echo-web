@@ -4,13 +4,13 @@
 #   ./scripts/release.sh 0.2.1
 #
 # Builds the Mac .dmg and the Windows installer, then creates the GitHub release v<version> on
-# alwaysspraveen/echo-web with the files the in-app updater needs. Uses the `gh` CLI; set GH_TOKEN
+# alwaysspraveen/resona with the files the in-app updater needs. Uses the `gh` CLI; set GH_TOKEN
 # to pick the GitHub account (e.g. GH_TOKEN=$(gh auth token -u alwaysspraveen)).
 set -euo pipefail
 
 VERSION="${1:?Usage: ./scripts/release.sh <version>, e.g. 0.2.1}"
 VERSION="${VERSION#v}"
-REPO="alwaysspraveen/echo-web"
+REPO="alwaysspraveen/resona"
 
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"

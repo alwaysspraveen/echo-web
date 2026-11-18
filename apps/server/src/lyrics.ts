@@ -1,7 +1,7 @@
 import { parseLrc, type Lyrics } from '@resona/shared';
 
 const LRCLIB = 'https://lrclib.net/api';
-const HEADERS = { 'User-Agent': 'Resona/0.2 (https://github.com/alwaysspraveen/echo-web)' };
+const HEADERS = { 'User-Agent': 'Resona/0.2 (https://github.com/alwaysspraveen/resona)' };
 
 interface LrclibRecord {
   trackName: string;

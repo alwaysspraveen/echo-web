@@ -13,7 +13,7 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     // No JSON body means the request never reached the Resona server (e.g. Vite's proxy got no answer).
-    if (!body) throw new ApiError("Can't reach the Resona server. Start the app with `npm run dev` from the echo-web folder (not apps/web), and check that terminal for red [server] errors", res.status);
+    if (!body) throw new ApiError("Can't reach the Resona server. Start the app with `npm run dev` from the repository folder (not apps/web), and check that terminal for red [server] errors", res.status);
     throw new ApiError(body.error ?? `Request failed (${res.status})`, res.status);
   }
   return res.json();

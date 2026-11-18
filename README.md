@@ -17,10 +17,10 @@ A music app for Mac, Windows and the browser: stream without ads, with synced ly
 
 | | |
 |---|---|
-| **macOS** (Apple Silicon) | [Download for Mac](https://github.com/alwaysspraveen/echo-web/releases/latest/download/Resona-mac.dmg) |
-| **Windows** (64-bit) | [Download for Windows](https://github.com/alwaysspraveen/echo-web/releases/latest/download/Resona-windows.exe) |
+| **macOS** (Apple Silicon) | [Download for Mac](https://github.com/alwaysspraveen/resona/releases/latest/download/Resona-mac.dmg) |
+| **Windows** (64-bit) | [Download for Windows](https://github.com/alwaysspraveen/resona/releases/latest/download/Resona-windows.exe) |
 
-These always get the newest version. Installed apps update themselves (Settings → Check for updates). All versions: [Releases](https://github.com/alwaysspraveen/echo-web/releases).
+These always get the newest version. Installed apps update themselves (Settings → Check for updates). All versions: [Releases](https://github.com/alwaysspraveen/resona/releases).
 
 **First launch**
 

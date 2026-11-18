@@ -1,4 +1,4 @@
-// In-app updates from GitHub Releases (alwaysspraveen/echo-web).
+// In-app updates from GitHub Releases (alwaysspraveen/resona).
 // - Windows: electron-updater (downloads the new installer and restarts into it).
 // - macOS: the app is ad-hoc signed, which Squirrel.Mac can't update, so we download the new .dmg,
 //   swap it into /Applications with a small helper script after quitting, and relaunch.
@@ -11,7 +11,7 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-const REPO = 'alwaysspraveen/echo-web';
+const REPO = 'alwaysspraveen/resona';
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 
 const newer = (a: string, b: string) => {
