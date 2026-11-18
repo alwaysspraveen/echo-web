@@ -1,5 +1,5 @@
 // Equalizer + volume boost, ported from Echo for Android (AxionEqScreen presets, LoudnessEnhancer).
-// Web Audio graph: player → 10 peaking filters → boost gain → limiter → speakers.
+// Web Audio graph: player → 10 peaking filters → spatial stage → boost gain → limiter → speakers.
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { audio, fader } from './audio';
@@ -41,13 +41,14 @@ interface EqState {
   bass: number; // dB, -12..12
   treble: number; // dB, -12..12
   boost: number; // 1 = 100%, up to 2 = 200%
+  spatial: boolean; // headphone spatial audio (wider stage, virtual speakers, a little room)
   open: boolean;
   set: (p: Partial<Omit<EqState, 'set'>>) => void;
 }
 
 export const useEq = create<EqState>()(
   persist(
-    (set) => ({ enabled: false, preset: 'flat', bands: PRESETS[0].bands, bass: 0, treble: 0, boost: 1, open: false, set: (p) => set(p) }),
+    (set) => ({ enabled: false, preset: 'flat', bands: PRESETS[0].bands, bass: 0, treble: 0, boost: 1, spatial: false, open: false, set: (p) => set(p) }),
     { name: 'echo-eq', partialize: ({ open: _o, set: _s, ...rest }) => rest },
   ),
 );
@@ -60,6 +61,81 @@ export function bandGains(s: Pick<EqState, 'bands' | 'bass' | 'treble'>) {
 let ctx: AudioContext | null = null;
 let filters: BiquadFilterNode[] = [];
 let boost: GainNode | null = null;
+let spatial: SpatialStage | null = null;
+
+interface SpatialStage { direct: GainNode; side: GainNode; virtual: GainNode; room: GainNode }
+
+/** Short, dark, decaying-noise impulse response: a small room, not a cathedral. */
+function roomImpulse(c: AudioContext, seconds = 1.6) {
+  const len = Math.floor(c.sampleRate * seconds);
+  const ir = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    let lp = 0;
+    for (let i = 0; i < len; i++) {
+      lp += 0.35 * (Math.random() * 2 - 1 - lp); // soften the highs
+      d[i] = lp * Math.pow(1 - i / len, 3.2);
+    }
+  }
+  return ir;
+}
+
+/**
+ * Spatial audio for headphones. Three layers mixed together:
+ * - direct: the stereo signal, with the side (L−R) part raised to widen the stage;
+ * - virtual: left and right played through HRTF "speakers" in front at ±35°, so the sound
+ *   sits outside your head instead of between your ears;
+ * - room: a little reverb for depth.
+ * Off = direct only with no widening, i.e. the untouched signal.
+ */
+function buildSpatial(c: AudioContext, input: AudioNode, output: AudioNode): SpatialStage {
+  const split = c.createChannelSplitter(2);
+  const merge = c.createChannelMerger(2);
+  input.connect(split);
+  // Widening: L' = L + k(L−R), R' = R + k(R−L). `side` holds k (0 = untouched).
+  const side = c.createGain();
+  side.gain.value = 0;
+  const diff = c.createGain(); // L−R
+  const inv = c.createGain();
+  inv.gain.value = -1;
+  split.connect(diff, 0);
+  split.connect(inv, 1).connect(diff);
+  diff.connect(side);
+  const sideInv = c.createGain();
+  sideInv.gain.value = -1;
+  side.connect(sideInv);
+  split.connect(merge, 0, 0);
+  split.connect(merge, 1, 1);
+  side.connect(merge, 0, 0);
+  sideInv.connect(merge, 0, 1);
+  const direct = c.createGain();
+  merge.connect(direct).connect(output);
+
+  const virtual = c.createGain();
+  virtual.gain.value = 0;
+  const vsplit = c.createChannelSplitter(2);
+  merge.connect(vsplit);
+  ([[0, -35], [1, 35]] as const).forEach(([ch, deg]) => {
+    const p = c.createPanner();
+    p.panningModel = 'HRTF';
+    p.distanceModel = 'linear';
+    p.refDistance = 1;
+    p.maxDistance = 10;
+    p.rolloffFactor = 0;
+    const a = (deg * Math.PI) / 180;
+    p.positionX.value = Math.sin(a);
+    p.positionZ.value = -Math.cos(a);
+    vsplit.connect(p, ch).connect(virtual);
+  });
+  virtual.connect(output);
+
+  const room = c.createGain();
+  room.gain.value = 0;
+  const conv = c.createConvolver();
+  conv.buffer = roomImpulse(c);
+  merge.connect(conv).connect(room).connect(output);
+  return { direct, side, virtual, room };
+}
 const connected = new WeakSet<HTMLMediaElement>();
 
 /** Builds the graph once (only after the user turns the EQ or boost on; until then audio is untouched). */
@@ -75,6 +151,7 @@ function ensureGraph() {
   });
   for (let i = 0; i < filters.length - 1; i++) filters[i].connect(filters[i + 1]);
   boost = ctx.createGain();
+  spatial = buildSpatial(ctx, filters[filters.length - 1], boost);
   // Limiter: lets the boost raise quiet parts without hard clipping on loud ones.
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -1.5;
@@ -82,7 +159,7 @@ function ensureGraph() {
   limiter.ratio.value = 20;
   limiter.attack.value = 0.003;
   limiter.release.value = 0.25;
-  filters[filters.length - 1].connect(boost).connect(limiter).connect(ctx.destination);
+  boost.connect(limiter).connect(ctx.destination);
   route(audio);
   route(fader); // crossfade tail player
   // The context can start suspended (autoplay rules); wake it whenever playback starts.
@@ -100,13 +177,19 @@ export const eqActive = () => ctx !== null;
 
 function apply() {
   const s = useEq.getState();
-  const on = s.enabled || s.boost !== 1;
+  const on = s.enabled || s.boost !== 1 || s.spatial;
   if (!on && !ctx) return; // never touch the audio until the user uses it
   ensureGraph();
   const gains = s.enabled ? bandGains(s) : BANDS.map(() => 0);
   const t = ctx!.currentTime;
   filters.forEach((f, i) => f.gain.setTargetAtTime(gains[i], t, 0.05));
   boost!.gain.setTargetAtTime(s.boost, t, 0.05);
+  // Spatial mix; levels chosen so switching it on doesn't jump in loudness.
+  const sp = s.spatial;
+  spatial!.side.gain.setTargetAtTime(sp ? 0.3 : 0, t, 0.08);
+  spatial!.direct.gain.setTargetAtTime(sp ? 0.55 : 1, t, 0.08);
+  spatial!.virtual.gain.setTargetAtTime(sp ? 0.75 : 0, t, 0.08);
+  spatial!.room.gain.setTargetAtTime(sp ? 0.18 : 0, t, 0.08);
 }
 
 /** Start applying settings (call once at startup). */

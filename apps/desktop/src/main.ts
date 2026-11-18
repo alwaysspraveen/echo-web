@@ -3,7 +3,7 @@
 // The web app and its API are served through a private "app://echo" scheme handled in-process
 // by the same Hono app the local server uses. Nothing listens on a network port, and the origin
 // stays the same across launches, so the library in IndexedDB/localStorage persists.
-import { app, BrowserWindow, ipcMain, Menu, MenuItem, protocol, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, MenuItem, protocol, session, shell, systemPreferences } from 'electron';
 import { checkForUpdates, startUpdateChecks } from './updater.js';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -113,10 +113,21 @@ if (!app.requestSingleInstanceLock()) {
       item.setSavePath(target);
     });
 
-    // Allow only writing to the clipboard (Copy room code); deny camera/mic/notifications etc.
-    const allowed = new Set(['clipboard-sanitized-write']);
-    session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(allowed.has(perm)));
-    session.defaultSession.setPermissionCheckHandler((_wc, perm) => allowed.has(perm));
+    // Allow writing to the clipboard (Copy room code), full screen video and the microphone
+    // (voice search, audio only); deny camera, notifications etc.
+    const allowed = new Set(['clipboard-sanitized-write', 'fullscreen']);
+    session.defaultSession.setPermissionRequestHandler((_wc, perm, cb, details) => {
+      if (perm === 'media') {
+        const types = (details as { mediaTypes?: string[] }).mediaTypes ?? [];
+        if (!(types.length > 0 && types.every((t) => t === 'audio'))) return cb(false);
+        // macOS also asks the user once (System Settings → Privacy → Microphone).
+        if (process.platform === 'darwin') return void systemPreferences.askForMediaAccess('microphone').then(cb, () => cb(false));
+        return cb(true);
+      }
+      cb(allowed.has(perm));
+    });
+    session.defaultSession.setPermissionCheckHandler((_wc, perm, _origin, details) =>
+      allowed.has(perm) || (perm === 'media' && (details as { mediaType?: string }).mediaType === 'audio'));
 
     createWindow();
     startUpdateChecks();

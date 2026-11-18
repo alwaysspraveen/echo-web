@@ -6,6 +6,7 @@ import { PRESETS } from '@/lib/theme';
 import { DEFAULT_LT_SERVER, useLt } from '@/lib/listenTogether';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { useEq } from '@/player/equalizer';
 import { cn } from '@/lib/utils';
 
 function Choice<T extends string>({ value, options, onChange, label }: {
@@ -100,6 +101,8 @@ export function SettingsDialog() {
           <p className="mb-3 text-sm text-text-muted">Stream 320 kbps or lossless audio from an Echo extension server (for example the 320kbs-extension or lossless-extension). Songs it doesn't have play from YouTube Music as usual.</p>
           <ExtensionsField />
         </section>
+
+        <SpatialAudioField />
 
         <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Crossfade</h3>
@@ -238,6 +241,22 @@ function AppUpdates() {
           {checking ? 'Checking…' : 'Check for updates'}
         </button>
       </div>
+    </section>
+  );
+}
+
+function SpatialAudioField() {
+  const spatial = useEq((s) => s.spatial);
+  return (
+    <section className="mt-2">
+      <h3 className="mb-1 font-display text-lg font-bold">Spatial audio</h3>
+      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
+        <span>
+          <span className="block font-semibold">Enable spatial audio</span>
+          <span className="block text-sm text-text-muted">Wider, more open sound that seems to come from around you. Best with headphones.</span>
+        </span>
+        <Switch checked={spatial} onCheckedChange={(on) => useEq.getState().set({ spatial: on })} aria-label="Enable spatial audio" />
+      </label>
     </section>
   );
 }
