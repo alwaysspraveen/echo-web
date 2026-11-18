@@ -54,9 +54,9 @@ export function ListenTogetherDialog() {
           </div>
 
           <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-text-muted">
-            <li className="flex items-center gap-1.5"><Zap className="size-4 text-seed-soft" />In sync to ~50 ms</li>
-            <li className="flex items-center gap-1.5"><Crown className="size-4 text-seed-soft" />You're the DJ</li>
-            <li className="flex items-center gap-1.5"><KeyRound className="size-4 text-seed-soft" />Just a code, no sign-up</li>
+            <li className="flex items-center gap-1.5"><Zap className="size-4 text-seed-soft" />Perfectly in sync</li>
+            <li className="flex items-center gap-1.5"><Crown className="size-4 text-seed-soft" />You pick the music</li>
+            <li className="flex items-center gap-1.5"><KeyRound className="size-4 text-seed-soft" />Invite friends with a code</li>
           </ul>
 
           <label className="grid gap-1.5 text-sm font-medium">
