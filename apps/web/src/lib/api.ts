@@ -81,7 +81,7 @@ export const useLyrics = (track: Track | undefined) =>
     },
   });
 
-export interface ExtensionStream { url: string; format?: string; quality?: string; streamQuality?: string; audioQuality?: string; codec?: string | null }
+export interface ExtensionStream { url: string; format?: string; quality?: string; streamQuality?: string; audioQuality?: string; codec?: string | null; bitDepth?: number; sampleRate?: number }
 
 /** Loads a stream in a hidden player and resolves true only if it actually starts (can play) in time. */
 function playsWithin(url: string, ms: number): Promise<boolean> {

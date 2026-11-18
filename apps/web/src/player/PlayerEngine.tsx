@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { fetchRadio, flacStreamFor, resolveExtensionStream, searchLossless, streamUrl } from '@/lib/api';
-import { useNowSource } from './source';
+import { fetchRadio, flacStreamFor, LOSSLESS_BASE, resolveExtensionStream, searchLossless, streamUrl } from '@/lib/api';
+import { setSource, sourceFromStream, useNowSource } from './source';
 import { COMPLETION_RATIO, recommend, recordListen, useBrainAdded } from '@/lib/brain';
 import { recordPlay, toggleLike } from '@/lib/db';
 import { DEFAULT_EXTENSIONS, useSettings } from '@/lib/settings';
@@ -55,7 +55,7 @@ export function PlayerEngine() {
     // Downloaded songs play from the stored file (works with no network); others stream.
     getOfflineAudio(id).catch(() => undefined).then(async (blob) => {
       if (loadedId.current !== id) return; // user already moved on
-      useNowSource.setState({ label: blob ? 'Downloaded' : null });
+      setSource({ label: blob ? 'Downloaded' : null });
       onExtension.current = false;
       // FLAC Mode (or a song from the FLAC catalog): play only the FLAC version, never YouTube.
       if (!blob && (useSettings.getState().flacMode || track.flac)) {
@@ -63,11 +63,11 @@ export function PlayerEngine() {
         switching.current = true;
         audio.removeAttribute('src');
         audio.load();
-        useNowSource.setState({ label: 'FLAC…' });
+        setSource({ label: 'FLAC…' });
         flacStreamFor(track).catch(() => null).then((ext) => {
           if (loadedId.current !== id) return;
           if (!ext) {
-            useNowSource.setState({ label: null });
+            setSource({ label: null });
             flacMisses.current++;
             if (flacMisses.current >= 8) {
               flacMisses.current = 0;
@@ -83,7 +83,7 @@ export function PlayerEngine() {
           switching.current = true;
           audio.src = ext.url;
           onExtension.current = true;
-          useNowSource.setState({ label: [ext.quality || ext.streamQuality || ext.audioQuality || 'LOSSLESS', ext.codec || ext.format || 'FLAC'].filter(Boolean).join(' · ').toUpperCase() });
+          setSource(sourceFromStream({ format: 'flac', ...ext }));
           if (!restoring || usePlayer.getState().playing) audio.play().catch(() => {});
         });
         document.title = `${track.title} · ${artistLine(track.artists)}`;
@@ -96,7 +96,26 @@ export function PlayerEngine() {
       const rank = (b: string) => { const i = DEFAULT_EXTENSIONS.findIndex((d) => d.base === b); return i === -1 ? DEFAULT_EXTENSIONS.length : i; };
       const bases = extensions.filter((e) => e.enabled).map((e) => e.base).sort((x, y) => rank(x) - rank(y));
       if (!blob && preferExtension && bases.length && quality !== 'low') {
+        const isFlac = (e: { format?: string; codec?: string | null; quality?: string; audioQuality?: string } | null) =>
+          !!e && /flac|lossless|hi_?res/i.test([e.format, e.codec, e.quality, e.audioQuality].join(' '));
         resolveExtensionStream(track, bases).catch(() => null).then((ext) => {
+          // FLAC is preferred; if it wasn't reachable just now (its server is a free service that is
+          // sometimes busy), try FLAC once more a little later and switch to it mid-song.
+          if (loadedId.current === id && !isFlac(ext) && bases.includes(LOSSLESS_BASE)) {
+            setTimeout(() => {
+              if (loadedId.current !== id || isFlac(useNowSource.getState().label ? { quality: useNowSource.getState().label! } : null)) return;
+              resolveExtensionStream(track, [LOSSLESS_BASE]).catch(() => null).then((flac) => {
+                if (!flac || loadedId.current !== id) return;
+                const at = audio.currentTime;
+                const wasPlaying = !audio.paused || usePlayer.getState().playing;
+                switching.current = true;
+                audio.src = flac.url;
+                onExtension.current = true;
+                audio.addEventListener('loadedmetadata', () => { markInternalSeek(); audio.currentTime = at; if (wasPlaying) audio.play().catch(() => {}); }, { once: true });
+                setSource(sourceFromStream({ format: 'flac', ...flac }));
+              });
+            }, 20_000);
+          }
           if (!ext || loadedId.current !== id) return;
           const at = audio.currentTime;
           const wasPlaying = !audio.paused || usePlayer.getState().playing;
@@ -104,7 +123,7 @@ export function PlayerEngine() {
           audio.src = ext.url;
           onExtension.current = true;
           audio.addEventListener('loadedmetadata', () => { markInternalSeek(); audio.currentTime = at; if (wasPlaying) audio.play().catch(() => {}); }, { once: true });
-          useNowSource.setState({ label: [ext.quality || ext.streamQuality || ext.audioQuality, ext.codec || ext.format].filter(Boolean).join(' · ').toUpperCase() || 'EXTENSION' });
+          setSource(sourceFromStream(ext));
         });
       }
       // Release the previous downloaded file later: a crossfade may still be playing its tail.
@@ -277,7 +296,7 @@ export function PlayerEngine() {
         onExtension.current = false;
         const at = audio.currentTime;
         switching.current = true;
-        useNowSource.setState({ label: null });
+        setSource({ label: null });
         audio.src = streamUrl(cur.id, useSettings.getState().quality);
         audio.addEventListener('loadedmetadata', () => { markInternalSeek(); audio.currentTime = at; if (st().playing) audio.play().catch(() => {}); }, { once: true });
         return;

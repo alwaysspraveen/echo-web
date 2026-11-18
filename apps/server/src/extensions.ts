@@ -7,7 +7,7 @@
 import { cleanTitle } from './lyrics.ts';
 
 export interface AddonTrack { id: string; title: string; artist: string; duration?: number }
-export interface AddonStream { url: string; format?: string; quality?: string; streamQuality?: string; audioQuality?: string; codec?: string | null }
+export interface AddonStream { url: string; format?: string; quality?: string; streamQuality?: string; audioQuality?: string; codec?: string | null; bitDepth?: number; sampleRate?: number }
 
 const QUALIFIER_TOKENS = new Set(['remix', 'rmx', 'remaster', 'remastered', 'live', 'instrumental', 'acoustic', 'extended', 'radio', 'edit', 'demo', 'deluxe', 'version', 'sped', 'slowed', 'reverb', 'cover', 'karaoke', 'mix', 'unplugged']);
 const CREDIT_TOKENS = new Set(['feat', 'ft', 'featuring', 'prod']);
@@ -95,6 +95,27 @@ export async function manifestName(base: string): Promise<string | null> {
 
 const resolved = new Map<string, { at: number; value: AddonStream | null }>();
 
+/**
+ * Real bit depth and sample rate of a FLAC file, read from its STREAMINFO header (first 64 bytes).
+ * Sources only say "lossless"; this tells CD quality (16-bit/44.1 kHz) from hi-res (24-bit, up to
+ * 192 kHz). Returns nothing for other formats.
+ */
+async function flacInfo(url: string): Promise<{ bitDepth: number; sampleRate: number } | null> {
+  try {
+    const res = await fetch(url, { headers: { Range: 'bytes=0-63' }, signal: AbortSignal.timeout(6000) });
+    if (!res.ok) return null;
+    const b = new Uint8Array(await res.arrayBuffer());
+    if (b.length < 22 || String.fromCharCode(b[0], b[1], b[2], b[3]) !== 'fLaC') return null;
+    const sampleRate = (b[18] << 12) | (b[19] << 4) | (b[20] >> 4);
+    const bitDepth = (((b[20] & 1) << 4) | (b[21] >> 4)) + 1;
+    return sampleRate > 0 && bitDepth >= 8 ? { bitDepth, sampleRate } : null;
+  } catch {
+    return null;
+  }
+}
+const withFlacInfo = async (stream: AddonStream) =>
+  /flac|lossless/i.test(`${stream.format} ${stream.quality} ${stream.codec}`) ? { ...stream, ...(await flacInfo(stream.url)) } : stream;
+
 /** Finds the song on an extension server and returns its high-quality stream, or null. */
 export async function resolveExtension(base: string, title: string, artist: string, durationSec?: number): Promise<AddonStream | null> {
   const key = `${base}|${title}|${artist}|${durationSec ?? ''}`;
@@ -109,7 +130,7 @@ export async function resolveExtension(base: string, title: string, artist: stri
     const match = selectBestMatch(found?.tracks ?? [], title, artist, durationSec ? durationSec * 1000 : undefined);
     if (!match) continue;
     const stream = await getJson<AddonStream>(`${base}/stream/${encodeURIComponent(match.id)}?quality=LOSSLESS`, 12000);
-    if (stream?.url && /^https?:\/\//.test(stream.url)) { value = stream; allowAudio(stream.url); break; }
+    if (stream?.url && /^https?:\/\//.test(stream.url)) { value = await withFlacInfo(stream); allowAudio(stream.url); break; }
   }
   resolved.set(key, { at: Date.now(), value });
   if (resolved.size > 500) resolved.delete(resolved.keys().next().value!);
@@ -152,5 +173,5 @@ export async function losslessStream(id: string): Promise<AddonStream | null> {
   const stream = await getJson<AddonStream>(`${LOSSLESS_BASE}/stream/${encodeURIComponent(id)}?quality=LOSSLESS`, 15000);
   if (!stream?.url || !/^https?:\/\//.test(stream.url)) return null;
   allowAudio(stream.url);
-  return stream;
+  return withFlacInfo(stream);
 }

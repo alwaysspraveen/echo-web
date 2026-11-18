@@ -16,6 +16,7 @@ import { useCurrentTrack, usePlayer, useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
 import { Artwork } from './Artwork';
 import { PlayPauseButton } from './PlayPauseButton';
+import { QualityBadge } from './QualityBadge';
 import { CastDeviceIcon } from './CastDialogs';
 import { castBridge, openCast, setCastVolume, toggleCastMute, useCast } from '@/lib/cast';
 import { ArtistLinks } from './TrackList';
@@ -86,7 +87,7 @@ export function PlayerBar() {
             <div className="min-w-0">
               <button onClick={() => setNowPlaying(true)} className="block max-w-full truncate text-left text-[15px] font-semibold hover:underline">{track.title}</button>
               <ArtistLinks track={track} className="block text-sm text-text-muted" />
-              {sourceLabel && sourceLabel !== 'Downloaded' && <span className="mt-0.5 inline-block rounded-md bg-seed/20 px-1.5 text-[10px] font-bold tracking-wide text-seed-soft">{sourceLabel}</span>}
+              {sourceLabel && sourceLabel !== 'Downloaded' && <QualityBadge className="mt-0.5" />}
             </div>
             <IconButton
               label={liked ? 'Remove from Liked songs' : 'Add to Liked songs'}

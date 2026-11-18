@@ -74,6 +74,7 @@ export function SettingsDialog() {
 
         <AppUpdates />
         <p className="mt-4 text-center text-xs text-text-faint">Resona for desktop · Developed by Praveen Kumar</p>
+        <p className="mt-1 flex justify-center gap-3 text-xs text-text-faint"><a href="https://github.com/alwaysspraveen/resona/blob/main/PRIVACY_POLICY.md" target="_blank" rel="noreferrer" className="hover:text-text hover:underline">Privacy Policy</a><a href="https://github.com/alwaysspraveen/resona/blob/main/DISCLAIMER.md" target="_blank" rel="noreferrer" className="hover:text-text hover:underline">Disclaimer</a><a href="https://github.com/alwaysspraveen/resona/blob/main/LICENSE" target="_blank" rel="noreferrer" className="hover:text-text hover:underline">License</a></p>
 
         <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Canvas</h3>

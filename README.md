@@ -135,3 +135,14 @@ Design notes: `docs/superpowers/specs/2026-11-17-resona-design.md`.
 
 - No YouTube account sign-in.
 - If YouTube changes its streaming rules, `VISIONOS` may stop serving full files. The server falls back to other clients, which may give only a ~1 MB preview. Updating `youtubei.js` is the usual fix.
+
+## Policies
+
+- [Privacy Policy](PRIVACY_POLICY.md): no accounts, no analytics, your library stays on your device
+- [Disclaimer](DISCLAIMER.md): independent project for personal use, not affiliated with any music service
+- [Security Policy](SECURITY.md): how to report a vulnerability privately
+- [Contributing](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md)
+
+## License
+
+Resona is free software under the [GNU General Public License v3.0](LICENSE).
