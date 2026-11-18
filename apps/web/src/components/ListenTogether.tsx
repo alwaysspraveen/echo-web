@@ -94,7 +94,7 @@ export function ListenTogetherDialog() {
   );
 }
 
-/** The Vibe "pulse": your current song spinning at the centre, rings beating outward, friends on the rings. */
+/** The Vibe "pulse": your current song spinning at the centre, with rings beating outward. */
 function VibeHero() {
   const track = useCurrentTrack();
   const art = track?.thumbnail;
@@ -104,16 +104,6 @@ function VibeHero() {
       {[0, 0.8, 1.6].map((d) => (
         <span key={d} className="vibe-ring absolute size-48 rounded-full border-2 border-seed-soft/60" style={{ animationDelay: `${d}s` }} />
       ))}
-      {/* Friends orbiting on the rings */}
-      <div className="vibe-orbit absolute size-44">
-        {[
-          { c: 'A', pos: 'left-0 top-1/2 -translate-x-1/2 -translate-y-1/2', bg: 'bg-[#7c5cff]' },
-          { c: 'S', pos: 'right-0 top-1/4 translate-x-1/2', bg: 'bg-[#2fb6a0]' },
-          { c: 'R', pos: 'bottom-0 left-2/3 translate-y-1/2', bg: 'bg-[#f5a623]' },
-        ].map((f) => (
-          <span key={f.c} className={cn('vibe-counter absolute grid size-8 place-items-center rounded-full text-xs font-bold text-white ring-2 ring-surface shadow-lg', f.pos, f.bg)}>{f.c}</span>
-        ))}
-      </div>
       {/* Your song as a spinning disc */}
       <div className="relative size-28 rounded-full shadow-[0_10px_40px_-8px_rgb(0_0_0/0.7)]">
         <div className="vibe-spin size-full overflow-hidden rounded-full ring-4 ring-black/40">
