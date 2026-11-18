@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  AudioWaveform, Heart, ListMusic, SlidersVertical, Loader2, MicVocal, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX,
+  AudioWaveform, Heart, ListMusic, SlidersVertical, MicVocal, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Slider } from '@/components/ui/slider';
@@ -15,6 +15,7 @@ import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/p
 import { useCurrentTrack, usePlayer, useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
 import { Artwork } from './Artwork';
+import { PlayPauseButton } from './PlayPauseButton';
 import { ArtistLinks } from './TrackList';
 
 function IconButton({ label, active, className, children, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string; active?: boolean }) {
@@ -107,14 +108,7 @@ export function PlayerBar() {
           <IconButton label="Previous" onClick={() => s.prev(audio.currentTime)} disabled={!track}>
             <SkipBack className="size-5 fill-current" />
           </IconButton>
-          <button
-            onClick={s.togglePlay}
-            disabled={!track}
-            aria-label={s.playing ? 'Pause' : 'Play'}
-            className="grid size-11 place-items-center rounded-full bg-text text-bg hover:scale-105 disabled:opacity-35 disabled:hover:scale-100"
-          >
-            {buffering ? <Loader2 className="size-5 animate-spin" /> : s.playing ? <Pause className="size-5 fill-current" /> : <Play className="size-5 translate-x-px fill-current" />}
-          </button>
+          <PlayPauseButton playing={s.playing} buffering={buffering} disabled={!track} onClick={s.togglePlay} size={46} className="mx-1" />
           <IconButton label="Next" onClick={() => s.next()} disabled={!track}>
             <SkipForward className="size-5 fill-current" />
           </IconButton>
