@@ -23,6 +23,7 @@
   /* M3 dark scheme roles: PrimaryContainer = tone 30, OnPrimaryContainer = tone 90 */
   --primary-container: hsl(354 65% 30%);
   --on-primary-container: hsl(357 100% 93%);
+  --error: #f2b8b5; /* M3 dark scheme Error */
   --line: rgb(240 222 224 / 0.1);
 
   /* shadcn variable names */
@@ -64,6 +65,7 @@
   --color-primary-container: var(--primary-container);
   --color-on-primary-container: var(--on-primary-container);
   --color-line: var(--line);
+  --color-error: var(--error);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -151,4 +153,10 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Indeterminate linear progress (Cast device scan). */
+@keyframes cast-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
 }

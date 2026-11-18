@@ -5,6 +5,7 @@
 // stays the same across launches, so the library in IndexedDB/localStorage persists.
 import { app, BrowserWindow, ipcMain, Menu, MenuItem, protocol, session, shell, systemPreferences } from 'electron';
 import { checkForUpdates, startUpdateChecks } from './updater.js';
+import { Caster, type CastMediaInfo } from './cast.js';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -95,6 +96,26 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(iconPath);
     // Load the API after FFMPEG_PATH is set. It's bundled next to this file by scripts/bundle.mjs.
     const { app: api } = await import(pathToFileURL(path.join(import.meta.dirname, 'server.js')).href);
+
+    // Google Cast (Chromecast, Google TV, Nest speakers), like Echo for Android.
+    const send = (channel: string, payload: unknown) => mainWindow?.webContents.send(channel, payload);
+    const caster = new Caster(
+      (devices) => send('echo:cast-devices', devices),
+      (status) => send('echo:cast-status', status),
+      // Cast devices get AAC (audio/mp4), as on Android.
+      (id, range, signal) => api.fetch(new Request(`${SCHEME}://${HOST}/api/stream/${id}?q=normal`, { headers: range ? { Range: range } : {}, signal })),
+    );
+    ipcMain.handle('echo:cast-discover', () => { caster.startDiscovery(); return caster.listDevices(); });
+    ipcMain.handle('echo:cast-stop-discovery', () => caster.stopDiscovery());
+    ipcMain.handle('echo:cast-connect', (_e, id: string) => caster.connect(id));
+    ipcMain.handle('echo:cast-disconnect', () => caster.disconnect());
+    ipcMain.handle('echo:cast-status', () => caster.getStatus());
+    ipcMain.on('echo:cast-load', (_e, media: CastMediaInfo, position: number, autoplay: boolean) => caster.load(media, position, autoplay));
+    ipcMain.on('echo:cast-play', () => caster.play());
+    ipcMain.on('echo:cast-pause', () => caster.pause());
+    ipcMain.on('echo:cast-seek', (_e, s: number) => caster.seek(s));
+    ipcMain.on('echo:cast-volume', (_e, v: number) => caster.setVolume(v));
+    app.on('before-quit', () => caster.disconnect());
 
     protocol.handle(SCHEME, async (request) => {
       const url = new URL(request.url);

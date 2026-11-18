@@ -9,6 +9,8 @@ import { SidePanel } from '@/components/SidePanel';
 import { NowPlaying } from '@/components/NowPlaying';
 import { NewPlaylistDialog } from '@/components/NewPlaylistDialog';
 import { PlayerEngine } from '@/player/PlayerEngine';
+import { CastController } from '@/player/CastController';
+import { CastDialogs } from '@/components/CastDialogs';
 import { ThemeController } from '@/components/ThemeController';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { EqualizerDialog } from '@/components/EqualizerDialog';
@@ -65,6 +67,8 @@ export default function App() {
       <ListenTogetherController />
       <ThemeController />
       <PlayerEngine />
+      <CastController />
+      <CastDialogs />
       <Toaster position="top-center" />
     </TooltipProvider>
   );

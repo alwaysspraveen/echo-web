@@ -7,7 +7,14 @@ if (audio) audio.preload = 'auto';
 // ---------- volume with fades (for crossfade) ----------
 let baseVolume = 0.64;
 let gain = 1;
-const applyVolume = () => { if (audio) audio.volume = Math.max(0, Math.min(1, baseVolume * gain)); };
+let castSilenced = false;
+const applyVolume = () => { if (audio) audio.volume = castSilenced ? 0 : Math.max(0, Math.min(1, baseVolume * gain)); };
+/** While casting, the local player keeps running in step with the device but silently. */
+export function setCastSilenced(on: boolean) {
+  castSilenced = on;
+  applyVolume();
+  if (fader) fader.muted = on;
+}
 export function setBaseVolume(v: number) { baseVolume = v; applyVolume(); }
 
 /** Ramps a value from `from` to `to` over `ms`, calling `set` each frame. Returns a cancel function. */
