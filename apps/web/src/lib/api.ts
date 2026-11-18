@@ -108,7 +108,10 @@ export async function resolveExtensionStream(track: Track, bases: string[]): Pro
     const res = await fetch(`/api/extension/resolve?${p}`, { signal: AbortSignal.timeout(15000) }).catch(() => null);
     if (!res?.ok) continue;
     const stream: ExtensionStream = await res.json();
-    if (stream?.url && (await playsWithin(stream.url, 6000))) return stream;
+    if (!stream?.url) continue;
+    // Play it through Echo's own server (same-origin), so the equalizer can process it.
+    stream.url = `/api/extension/audio?u=${encodeURIComponent(stream.url)}`;
+    if (await playsWithin(stream.url, 6000)) return stream;
   }
   return null;
 }

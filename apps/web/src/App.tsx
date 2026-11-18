@@ -11,6 +11,7 @@ import { NewPlaylistDialog } from '@/components/NewPlaylistDialog';
 import { PlayerEngine } from '@/player/PlayerEngine';
 import { ThemeController } from '@/components/ThemeController';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import { EqualizerDialog } from '@/components/EqualizerDialog';
 import { ListenTogetherDialog } from '@/components/ListenTogether';
 import { ListenTogetherController } from '@/components/ListenTogetherController';
 import HomePage from '@/pages/Home';
@@ -59,6 +60,7 @@ export default function App() {
       <NowPlaying />
       <NewPlaylistDialog />
       <SettingsDialog />
+      <EqualizerDialog />
       <ListenTogetherDialog />
       <ListenTogetherController />
       <ThemeController />

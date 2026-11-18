@@ -5,8 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import './index.css';
 import { initOffline } from './lib/offline';
+import { initEqualizer } from './player/equalizer';
 
 initOffline();
+initEqualizer();
 
 // Inside the Echo desktop app on macOS the title bar is hidden; see .desktop-mac in index.css.
 if (/Electron/.test(navigator.userAgent) && /Mac/.test(navigator.platform)) document.documentElement.classList.add('desktop-mac');
