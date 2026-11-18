@@ -60,3 +60,19 @@ export function openCast() {
 
 /** Android CastDevicePickerSheet / CastButton device type → icon. */
 export const castDeviceName = (s: CastStatus) => s.device?.name ?? 'Cast Device';
+
+let unmuteTo = 0.3;
+/** When the user last moved the volume here (device reports are briefly ignored after that). */
+export let castVolumeTouchedAt = 0;
+/** While casting, the volume slider controls the device's own volume (as on Android). */
+export function setCastVolume(level: number) {
+  const v = Math.max(0, Math.min(1, level));
+  if (v > 0) unmuteTo = v;
+  castVolumeTouchedAt = performance.now();
+  useCast.setState((s) => ({ status: { ...s.status, volume: v } }));
+  castBridge?.setVolume(v);
+}
+export function toggleCastMute() {
+  const v = useCast.getState().status.volume ?? 0;
+  setCastVolume(v > 0 ? 0 : unmuteTo);
+}

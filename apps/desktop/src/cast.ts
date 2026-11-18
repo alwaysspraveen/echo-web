@@ -208,8 +208,19 @@ export class Caster {
   play() { this.mediaCmd('PLAY'); }
   pause() { this.mediaCmd('PAUSE'); }
   seek(seconds: number) { this.mediaCmd('SEEK', { currentTime: seconds }); }
+  private volumeTimer: NodeJS.Timeout | null = null;
+  private volumeWanted = -1;
+  /** Sets the device volume; while a slider is dragged, sends at most ~10 updates a second. */
   setVolume(level: number) {
-    if (this.socket) this.send('receiver-0', NS.receiver, { type: 'SET_VOLUME', volume: { level: Math.max(0, Math.min(1, level)) }, requestId: this.requestId++ });
+    this.volumeWanted = Math.max(0, Math.min(1, level));
+    if (this.volumeTimer) return;
+    const flush = () => {
+      if (this.socket && this.volumeWanted >= 0) this.send('receiver-0', NS.receiver, { type: 'SET_VOLUME', volume: { level: this.volumeWanted }, requestId: this.requestId++ });
+      this.volumeWanted = -1;
+      this.volumeTimer = null;
+    };
+    flush();
+    this.volumeTimer = setTimeout(() => { if (this.volumeWanted >= 0) flush(); else this.volumeTimer = null; }, 100);
   }
   private mediaCmd(type: string, extra: object = {}) {
     if (!this.transportId || !this.mediaSessionId) return;

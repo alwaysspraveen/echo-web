@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { Artwork } from './Artwork';
 import { PlayPauseButton } from './PlayPauseButton';
 import { CastDeviceIcon } from './CastDialogs';
-import { castBridge, openCast, useCast } from '@/lib/cast';
+import { castBridge, openCast, setCastVolume, toggleCastMute, useCast } from '@/lib/cast';
 import { ArtistLinks } from './TrackList';
 
 function IconButton({ label, active, className, children, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string; active?: boolean }) {
@@ -69,7 +69,9 @@ export function PlayerBar() {
   const sourceLabel = useNowSource((s) => s.label);
   const eqOn = useEq((s) => s.enabled || s.boost !== 1);
   const liked = useIsLiked(track?.id);
-  const VolumeIcon = s.muted || s.volume === 0 ? VolumeX : s.volume < 0.5 ? Volume1 : Volume2;
+  const castVolume = useCast((c) => (c.status.state === 'connected' ? c.status.volume ?? 0 : null));
+  const shownVolume = castVolume ?? (s.muted ? 0 : s.volume);
+  const VolumeIcon = shownVolume === 0 ? VolumeX : shownVolume < 0.5 ? Volume1 : Volume2;
 
   return (
     <div className="glass relative z-50 mx-3 mb-3 grid h-[84px] grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-4 rounded-[28px] px-3">
@@ -146,10 +148,17 @@ export function PlayerBar() {
         <IconButton label="Queue" active={panel === 'queue'} onClick={() => togglePanel('queue')}>
           <ListMusic className="size-[18px]" />
         </IconButton>
-        <IconButton label={s.muted ? 'Unmute' : 'Mute'} onClick={s.toggleMute}>
+        <IconButton label={castVolume !== null ? (castVolume === 0 ? 'Unmute TV' : 'Mute TV') : s.muted ? 'Unmute' : 'Mute'} onClick={castVolume !== null ? toggleCastMute : s.toggleMute}>
           <VolumeIcon className="size-[18px]" />
         </IconButton>
-        <Slider aria-label="Volume" value={[s.muted ? 0 : s.volume]} max={1} step={0.01} onValueChange={([v]) => s.setVolume(v)} className="w-24 py-2 xl:w-28" />
+        <Slider
+          aria-label={castVolume !== null ? 'Cast device volume' : 'Volume'}
+          value={[shownVolume]}
+          max={1}
+          step={0.01}
+          onValueChange={([v]) => (castVolume !== null ? setCastVolume(v) : s.setVolume(v))}
+          className={cn('w-24 py-2 xl:w-28', castVolume !== null && '[&_[data-slot=slider-range]]:bg-primary')}
+        />
       </div>
     </div>
   );

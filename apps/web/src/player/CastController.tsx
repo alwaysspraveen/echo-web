@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { castBridge, useCast, type CastMediaInfo, type CastStatus } from '@/lib/cast';
+import { castBridge, castVolumeTouchedAt, useCast, type CastMediaInfo, type CastStatus } from '@/lib/cast';
 import { audio, isInternalSeek, markInternalSeek, setCastSilenced } from './audio';
 import { useCurrentTrack, usePlayer } from './store';
 import type { Track } from '@echo/shared';
@@ -27,8 +27,6 @@ export function CastController() {
   const status = useCast((s) => s.status);
   const track = useCurrentTrack();
   const playing = usePlayer((s) => s.playing);
-  const volume = usePlayer((s) => s.volume);
-  const muted = usePlayer((s) => s.muted);
   const connected = status.state === 'connected';
   const loadedId = useRef<string | null>(null);
   /** Ignore device play/pause reports right after we sent a command. */
@@ -42,7 +40,9 @@ export function CastController() {
     const offDevices = castBridge.onDevices((devices) => useCast.setState({ devices }));
     const offStatus = castBridge.onStatus((s: CastStatus) => {
       const prev = useCast.getState().status;
-      useCast.setState({ status: s, statusAt: performance.now() });
+      // Keep the slider where the user is dragging it; older device reports would make it jump.
+      const dragging = performance.now() - castVolumeTouchedAt < 1000;
+      useCast.setState({ status: dragging ? { ...s, volume: prev.volume } : s, statusAt: performance.now() });
       if (s.error && s.error !== lastError && s.state === 'idle') toast.error(s.error);
       lastError = s.error ?? '';
       if (prev.state !== 'connected' && s.state === 'connected') toast.success(`Casting to ${s.device?.name ?? 'device'}`);
@@ -58,11 +58,20 @@ export function CastController() {
   }, [connected]);
 
   // Song changes (and the first song after connecting) load on the device.
+  // Only the song already playing when casting starts continues from its position; every other
+  // song starts at 0:00. (While the app switches songs, the player can still report the previous
+  // song's position, e.g. while it looks for a FLAC version, which made songs start mid-way.)
+  const startedOn = useRef<string | null>(null);
+  useEffect(() => {
+    if (!connected) { startedOn.current = null; return; }
+    if (startedOn.current === null) startedOn.current = track?.id ?? '';
+  }, [connected, track]);
   useEffect(() => {
     if (!connected || !castBridge || !track || loadedId.current === track.id) return;
+    const continuing = loadedId.current === null && startedOn.current === track.id;
     loadedId.current = track.id;
     commandAt.current = performance.now();
-    castBridge.load(toMedia(track), audio.currentTime || 0, usePlayer.getState().playing);
+    castBridge.load(toMedia(track), continuing ? audio.currentTime || 0 : 0, usePlayer.getState().playing);
   }, [connected, track]);
 
   // Play / pause.
@@ -70,12 +79,6 @@ export function CastController() {
     if (!connected || !castBridge || !loadedId.current) return;
     cmd(() => (playing ? castBridge!.play() : castBridge!.pause()));
   }, [connected, playing]);
-
-  // Volume (the app's volume slider controls the device, as on Android).
-  useEffect(() => {
-    if (!connected || !castBridge) return;
-    castBridge.setVolume(muted ? 0 : volume);
-  }, [connected, volume, muted]);
 
   // Seeks made in the app go to the device.
   useEffect(() => {

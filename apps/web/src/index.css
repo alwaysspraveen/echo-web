@@ -160,3 +160,13 @@
   0% { transform: translateX(-100%); }
   100% { transform: translateX(300%); }
 }
+
+/* Android TV: a clear focus ring for the remote, and hover-only controls shown on focus. */
+.tv :focus-visible {
+  outline: 3px solid var(--seed-soft);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+.tv .group:focus-within .group-hover\:opacity-100,
+.tv .group:focus-visible .group-hover\:opacity-100 { opacity: 1; }
+.tv .drag-area { -webkit-app-region: no-drag; }
