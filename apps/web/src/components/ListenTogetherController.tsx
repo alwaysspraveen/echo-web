@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import {
   fromLt, ltCanControl, ltIsHost, requestSync, suggest, resumeRoom, refreshServerList, sendAction, sendBufferReady, setLtListener, toLt,
   useLt, type LtTrack, type PlaybackAction, type RoomSnapshot,
@@ -25,7 +25,7 @@ function send(a: PlaybackAction) {
   sent = [...sent.filter((s) => now() - s.at < 4000), { action: a.action, trackId: a.trackId, position: a.position, at: now() }];
   sendAction(a);
 }
-const isEcho = (a: PlaybackAction) =>
+const isOwnMessage = (a: PlaybackAction) =>
   sent.some((s) => s.action === a.action && now() - s.at < 4000 && (!s.trackId || s.trackId === a.trackId || !a.trackId) &&
     (s.position == null || a.position == null || Math.abs(s.position - a.position) < 1500));
 
@@ -70,7 +70,7 @@ function applySnapshot(s: RoomSnapshot) {
 }
 
 function applyAction(a: PlaybackAction) {
-  if (isEcho(a)) return;
+  if (isOwnMessage(a)) return;
   const p = usePlayer.getState();
   switch (a.action) {
     case 'change_track':
@@ -131,12 +131,12 @@ function announceCurrent() {
   const t = current();
   if (!t) return;
   const p = usePlayer.getState();
-  send({ action: 'change_track', trackId: t.id, trackInfo: toLt(t), queue: p.queue.map(toLt), queueTitle: 'Echo', position: 0 });
+  send({ action: 'change_track', trackId: t.id, trackInfo: toLt(t), queue: p.queue.map(toLt), queueTitle: 'Resona', position: 0 });
   send({ action: p.playing ? 'play' : 'pause', position: posMs() });
 }
 
 /**
- * Bridges the local player and a Listen Together room (Android Echo compatible). Renders nothing.
+ * Bridges the local player and a Listen Together room (works with phones too). Renders nothing.
  */
 export function ListenTogetherController() {
   const active = useLt((s) => !!s.session);
@@ -185,11 +185,11 @@ export function ListenTogetherController() {
 
       if (trackChanged && s.index >= 0) {
         const t = s.queue[s.index];
-        send({ action: 'change_track', trackId: t.id, trackInfo: toLt(t), queue: s.queue.map(toLt), queueTitle: 'Echo', position: 0 });
+        send({ action: 'change_track', trackId: t.id, trackInfo: toLt(t), queue: s.queue.map(toLt), queueTitle: 'Resona', position: 0 });
         if (s.playing) send({ action: 'play', position: 0 });
         return;
       }
-      if (queueChanged) send({ action: 'sync_queue', queue: s.queue.map(toLt), queueTitle: 'Echo' });
+      if (queueChanged) send({ action: 'sync_queue', queue: s.queue.map(toLt), queueTitle: 'Resona' });
       if (playChanged) send({ action: s.playing ? 'play' : 'pause', position: posMs() });
     });
     // User seeks (not the ones we make to follow the room).

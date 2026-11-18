@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { HardDriveDownload, Play, Shuffle } from 'lucide-react';
 import { saveAllOffline } from '@/lib/offline';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import { Button } from '@/components/ui/button';
 import { LoadingIndicator } from '@/components/ui/loading-indicator';
 import { usePlayer } from '@/player/store';
@@ -12,13 +12,13 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   return (
     <div className="mx-auto max-w-md py-24 text-center">
       <p className="font-display text-xl font-bold">This didn't load</p>
-      <p className="mt-2 text-text-muted">{message.startsWith("Can't reach") ? `${message}.` : `${message}. Check that the Echo server is running, then try again.`}</p>
+      <p className="mt-2 text-text-muted">{message.startsWith("Can't reach") ? `${message}.` : `${message}. Check that the Resona server is running, then try again.`}</p>
       {onRetry && <Button variant="secondary" className="mt-5" onClick={onRetry}>Try again</Button>}
     </div>
   );
 }
 
-/** Page loading, like Echo for Android's ContainedLoadingIndicator. */
+/** Page loading (Material 3 ContainedLoadingIndicator). */
 function PageLoading() {
   return (
     <div className="grid min-h-[50vh] place-items-center">

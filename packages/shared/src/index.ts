@@ -12,6 +12,8 @@ export interface Track {
   album?: { id?: string; name: string };
   duration?: number; // seconds
   thumbnail?: string;
+  /** Lossless catalog id: the song plays only from FLAC (the Lossless section), never YouTube. */
+  flac?: string;
 }
 
 export type CardKind = 'album' | 'playlist' | 'artist' | 'song' | 'video';

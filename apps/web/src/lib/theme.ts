@@ -1,4 +1,4 @@
-// Generates Echo's dark palette from one seed color, the way the Android app derives its
+// Generates the dark palette from one seed color (Material-style tonal palette), deriving its
 // Material scheme from a seed (default #ED5564). Applied as CSS variables on <html>.
 
 export interface ThemePreset {
@@ -10,7 +10,7 @@ export interface ThemePreset {
 export const DEFAULT_SEED = '#ED5564';
 
 export const PRESETS: ThemePreset[] = [
-  { id: 'echo', name: 'Echo red', seed: DEFAULT_SEED },
+  { id: 'echo', name: 'Resona red', seed: DEFAULT_SEED },
   { id: 'amber', name: 'Amber', seed: '#F0A43A' },
   { id: 'lime', name: 'Lime', seed: '#9ACD4E' },
   { id: 'teal', name: 'Teal', seed: '#2BB3A3' },

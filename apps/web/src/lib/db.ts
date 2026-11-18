@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { Lyrics, Track } from '@echo/shared';
+import type { Lyrics, Track } from '@resona/shared';
 
 export interface LikedTrack extends Track {
   likedAt: number;
@@ -26,7 +26,7 @@ export interface OfflineTrack {
   savedAt: number;
 }
 
-/** Per-song listening stats for Echo Brain (same fields as Android's SongPlayStats). */
+/** Per-song listening stats for Resona Brain  */
 export interface SongStats {
   id: string;
   track: Track;
@@ -35,7 +35,7 @@ export interface SongStats {
   lastPlayedAt: number;
 }
 
-class EchoDB extends Dexie {
+class ResonaDB extends Dexie {
   liked!: EntityTable<LikedTrack, 'id'>;
   history!: EntityTable<HistoryEntry, 'id'>;
   playlists!: EntityTable<LocalPlaylist, 'id'>;
@@ -49,7 +49,7 @@ class EchoDB extends Dexie {
   }
 }
 
-export const db = new EchoDB();
+export const db = new ResonaDB();
 
 const HISTORY_LIMIT = 500;
 

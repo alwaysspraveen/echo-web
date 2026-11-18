@@ -2,7 +2,7 @@ import vm from 'node:vm';
 import { Innertube, Platform } from 'youtubei.js';
 import type {
   AlbumPage, ArtistPage, ArtistRef, Card, CardKind, PlaylistPage, SearchResults, Shelf, Suggestions, Track,
-} from '@echo/shared';
+} from '@resona/shared';
 
 // youtubei.js needs a JS evaluator to decipher stream URLs. YouTube's player script runs
 // in a fresh vm context (no access to Node globals) with a hard timeout.
@@ -263,7 +263,7 @@ export const getRadio = (videoId: string) =>
     return tracks(items).filter((t) => t.id !== videoId);
   });
 
-// ---------- browse: charts, moods & genres, podcasts (same pages as the Android app) ----------
+// ---------- browse: charts, moods & genres, podcasts  ----------
 
 async function browseShelves(browseId: string, params?: string): Promise<Shelf[]> {
   const client = await yt();

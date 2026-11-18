@@ -1,6 +1,6 @@
-# Echo Web — design
+# Resona — design
 
-A laptop web version of Echo Music (Android). Runs locally now; must later be hostable or wrappable in Electron without a rewrite.
+A music app for laptops. Runs locally now; must later be hostable or wrappable in Electron without a rewrite.
 
 ## Scope (v1)
 - Search (songs, albums, artists, playlists) with suggestions
@@ -39,7 +39,7 @@ The server resolves an audio-only format (YTMUSIC client first, IOS client as fa
 - Dexie DB `echo-web`: `liked`, `history`, `playlists`.
 
 ## Look
-Follows `Echo-Music/DESIGN.md`: dark base, translucent cards (`surface-variant` at 30% alpha), 24px radius, flat elevation, a glass (backdrop-blur) player bar, and the accent red `#ED5564`. Desktop layout: left sidebar (Home, Search, Library, playlists), main scroll area, bottom player bar, right panel that toggles between Queue and Lyrics.
+Design: dark base, translucent cards (`surface-variant` at 30% alpha), 24px radius, flat elevation, a glass (backdrop-blur) player bar, and the accent red `#ED5564`. Desktop layout: left sidebar (Home, Search, Library, playlists), main scroll area, bottom player bar, right panel that toggles between Queue and Lyrics.
 
 ## Errors
 - Server returns `{ error }` with 4xx/5xx. Frontend shows inline error states with Retry.

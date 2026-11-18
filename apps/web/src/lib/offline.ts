@@ -1,9 +1,9 @@
-// Offline downloads, like the Android app's: the full audio (best quality), artwork and lyrics
+// Offline downloads: the full audio (best quality), artwork and lyrics
 // are stored in IndexedDB so songs play with no network. Downloads run two at a time.
 import { create } from 'zustand';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { toast } from 'sonner';
-import type { Lyrics, Track } from '@echo/shared';
+import type { Lyrics, Track } from '@resona/shared';
 import { artUrl, streamUrl } from './api';
 import { db } from './db';
 

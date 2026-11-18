@@ -3,9 +3,9 @@ import { toast } from 'sonner';
 import { castBridge, castVolumeTouchedAt, useCast, type CastMediaInfo, type CastStatus } from '@/lib/cast';
 import { audio, isInternalSeek, markInternalSeek, setCastSilenced } from './audio';
 import { useCurrentTrack, usePlayer } from './store';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 
-/** 1080×1080 artwork for the TV, as Android does (thumbnailUrl.resize(1080, 1080)). */
+/** 1080×1080 artwork for the TV. */
 const bigArt = (url?: string) => url?.replace(/=w\d+-h\d+/, '=w1080-h1080').replace(/=s\d+/, '=s1080');
 
 const toMedia = (t: Track): CastMediaInfo => ({
@@ -68,6 +68,7 @@ export function CastController() {
   }, [connected, track]);
   useEffect(() => {
     if (!connected || !castBridge || !track || loadedId.current === track.id) return;
+    if (track.flac) { loadedId.current = track.id; toast("FLAC catalog songs can't be cast yet. They play on this computer."); return; }
     const continuing = loadedId.current === null && startedOn.current === track.id;
     loadedId.current = track.id;
     commandAt.current = performance.now();

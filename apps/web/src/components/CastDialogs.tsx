@@ -5,7 +5,7 @@ import { castBridge, castDeviceName, useCast, type CastDevice, type CastDeviceKi
 import { useCurrentTrack } from '@/player/store';
 import { cn } from '@/lib/utils';
 
-// Desktop versions of Echo for Android's CastDevicePickerSheet and CastSessionSheet: same
+// Cast device picker and "Now Casting" session sheet.
 // content, sizes (dp → px) and colour roles, shown as dialogs instead of bottom sheets.
 
 export function CastDeviceIcon({ kind, className }: { kind: CastDeviceKind | undefined; className?: string }) {
@@ -36,7 +36,7 @@ function Picker() {
 
   useEffect(() => {
     castBridge!.discover().then((d) => d.length && useCast.setState({ devices: d })).catch(() => {});
-    // Keep scanning for a discovery window before showing the empty state (5 s, as on Android).
+    // Keep scanning for a discovery window before showing the empty state (5 s).
     const t = setTimeout(() => setScanning(false), 5000);
     const again = setInterval(() => castBridge!.discover().catch(() => {}), 1500);
     return () => { clearTimeout(t); clearInterval(again); };

@@ -6,7 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Echo Music tokens, taken from Echo-Music/DESIGN.md:
+ * Resona design tokens:
  * dark scheme generated from the seed #ED5564, translucent surfaceVariant cards (30% alpha),
  * 24px corners, flat elevation, Liquid-Glass-style blur on floating chrome.
  */

@@ -1,12 +1,12 @@
 import { LoadingIndicator } from '@/components/ui/loading-indicator';
 import { useEffect, useRef, useState } from 'react';
-import { activeLineIndex, type Track } from '@echo/shared';
+import { activeLineIndex, type Track } from '@resona/shared';
 import { useLyrics } from '@/lib/api';
 import { seek, usePreciseTime } from '@/player/audio';
 import { cn } from '@/lib/utils';
 
 /**
- * Synced lyrics, following Echo's Music Flow treatment: the current line in ExtraBold white,
+ * Synced lyrics, in a Music Flow style: the current line in ExtraBold white,
  * upcoming lines dimmed. Click a line to seek. Falls back to plain lyrics.
  */
 export function LyricsView({ track, size = 'panel' }: { track: Track | undefined; size?: 'panel' | 'stage' }) {

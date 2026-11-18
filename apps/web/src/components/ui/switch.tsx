@@ -3,7 +3,7 @@ import { Switch as SwitchPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
-/** On/off switch (shadcn style, restyled for Echo: accent track when on). */
+/** On/off switch (shadcn style, restyled for Resona: accent track when on). */
 function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimitive.Root>) {
   return (
     <SwitchPrimitive.Root

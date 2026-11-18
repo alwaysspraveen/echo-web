@@ -1,4 +1,4 @@
-// Google Cast, like Echo for Android: play on a Chromecast, Google TV or Nest speaker and use
+// Google Cast: play on a Chromecast, Google TV or Nest speaker and use
 // the app as the remote. Desktop app only (the Electron main process talks to the devices).
 import { create } from 'zustand';
 
@@ -58,13 +58,13 @@ export function openCast() {
   useCast.setState(casting ? { sessionOpen: true } : { pickerOpen: true });
 }
 
-/** Android CastDevicePickerSheet / CastButton device type → icon. */
+/** The connected device's name, for the session sheet. */
 export const castDeviceName = (s: CastStatus) => s.device?.name ?? 'Cast Device';
 
 let unmuteTo = 0.3;
 /** When the user last moved the volume here (device reports are briefly ignored after that). */
 export let castVolumeTouchedAt = 0;
-/** While casting, the volume slider controls the device's own volume (as on Android). */
+/** While casting, the volume slider controls the device's own volume  */
 export function setCastVolume(level: number) {
   const v = Math.max(0, Math.min(1, level));
   if (v > 0) unmuteTo = v;

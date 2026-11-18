@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { getOfflineLyrics } from './offline';
-import type { AlbumPage, ArtistPage, Lyrics, PlaylistPage, SearchResults, Shelf, Suggestions, Track } from '@echo/shared';
+import type { AlbumPage, ArtistPage, Lyrics, PlaylistPage, SearchResults, Shelf, Suggestions, Track } from '@resona/shared';
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -12,8 +12,8 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`/api${path}`, { signal });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    // No JSON body means the request never reached the Echo server (e.g. Vite's proxy got no answer).
-    if (!body) throw new ApiError("Can't reach the Echo server. Start the app with `npm run dev` from the echo-web folder (not apps/web), and check that terminal for red [server] errors", res.status);
+    // No JSON body means the request never reached the Resona server (e.g. Vite's proxy got no answer).
+    if (!body) throw new ApiError("Can't reach the Resona server. Start the app with `npm run dev` from the echo-web folder (not apps/web), and check that terminal for red [server] errors", res.status);
     throw new ApiError(body.error ?? `Request failed (${res.status})`, res.status);
   }
   return res.json();
@@ -109,9 +109,34 @@ export async function resolveExtensionStream(track: Track, bases: string[]): Pro
     if (!res?.ok) continue;
     const stream: ExtensionStream = await res.json();
     if (!stream?.url) continue;
-    // Play it through Echo's own server (same-origin), so the equalizer can process it.
+    // Play it through Resona's own server (same-origin), so the equalizer can process it.
     stream.url = `/api/extension/audio?u=${encodeURIComponent(stream.url)}`;
     if (await playsWithin(stream.url, 6000)) return stream;
   }
   return null;
+}
+
+// ---------- FLAC Mode ----------
+/** The FLAC (lossless) extension; FLAC Mode uses only this source. */
+export const LOSSLESS_BASE = 'https://lossless-extension-eight-sepia.vercel.app';
+
+/** Searches the FLAC catalog: every result plays in FLAC. */
+export const useLosslessSearch = (q: string) =>
+  useQuery({
+    queryKey: ['lossless-search', q],
+    queryFn: ({ signal }) => get<{ tracks: Track[] }>(`/lossless/search?q=${encodeURIComponent(q)}`, signal).then((r) => r.tracks),
+    enabled: q.length > 0,
+    staleTime: 10 * 60_000,
+  });
+export const searchLossless = (q: string) => get<{ tracks: Track[] }>(`/lossless/search?q=${encodeURIComponent(q)}`).then((r) => r.tracks);
+
+/** The song's FLAC stream (through Resona's server), or null when it has no FLAC version. */
+export async function flacStreamFor(track: Track): Promise<ExtensionStream | null> {
+  if (!track.flac) return resolveExtensionStream(track, [LOSSLESS_BASE]);
+  const res = await fetch(`/api/lossless/stream/${encodeURIComponent(track.flac)}`, { signal: AbortSignal.timeout(15000) }).catch(() => null);
+  if (!res?.ok) return null;
+  const stream: ExtensionStream = await res.json();
+  if (!stream?.url) return null;
+  stream.url = `/api/extension/audio?u=${encodeURIComponent(stream.url)}`;
+  return stream;
 }

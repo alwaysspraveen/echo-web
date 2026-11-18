@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { CircleCheck, Download, FileAudio, HardDriveDownload, Trash2 } from 'lucide-react';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { downloadTrack } from '@/lib/download';
 import { removeOffline, saveOffline, useDownloadProgress, useIsOffline } from '@/lib/offline';
@@ -27,8 +27,8 @@ function ProgressRing({ value, className }: { value: number; className?: string 
 }
 
 /**
- * A download button that opens on hover (or click) with the two choices from the Android app:
- * keep the song in Echo for offline play, or save an MP3 file to the computer.
+ * A download button that opens on hover (or click) with two choices:
+ * keep the song in the app for offline play, or save an MP3 file to the computer.
  */
 export function DownloadMenu({ track, children, align = 'end' }: { track: Track; children: ReactNode; align?: 'start' | 'end' | 'center' }) {
   const [open, setOpen] = useState(false);
@@ -56,7 +56,7 @@ export function DownloadMenu({ track, children, align = 'end' }: { track: Track;
             <HardDriveDownload />
             <span className="flex flex-col">
               <span>Save for offline</span>
-              <span className="text-xs text-text-muted">Play in Echo without internet</span>
+              <span className="text-xs text-text-muted">Play in Resona without internet</span>
             </span>
           </DropdownMenuItem>
         )}

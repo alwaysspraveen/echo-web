@@ -1,18 +1,18 @@
-// Equalizer + volume boost, ported from Echo for Android (AxionEqScreen presets, LoudnessEnhancer).
+// Equalizer + volume boost, presets and loudness boost.
 // Web Audio graph: player → 10 peaking filters → spatial stage → boost gain → limiter → speakers.
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { audio, fader } from './audio';
 
-/** Same bands as Android. */
+/** 10 bands, 31 Hz to 16 kHz. */
 export const BANDS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] as const;
 export const BAND_LIMIT_DB = 12;
 
-// Android stores preset levels in millibels (150 = 1.5 dB); same values, converted to dB.
+// Preset levels in millibels (150 = 1.5 dB), converted to dB.
 const mb = (...v: number[]) => v.map((x) => x / 100);
 export const PRESETS: { id: string; name: string; bands: number[] }[] = [
   { id: 'flat', name: 'Flat', bands: mb(0, 0, 0, 0, 0, 0, 0, 0, 0, 0) },
-  { id: 'echo', name: 'Echo Signature', bands: mb(150, 100, 50, 0, -20, 0, 80, 150, 200, 150) },
+  { id: 'echo', name: 'Resona Signature', bands: mb(150, 100, 50, 0, -20, 0, 80, 150, 200, 150) },
   { id: 'acoustic', name: 'Acoustic', bands: mb(150, 150, 50, 75, 100, 75, 125, 175, 150, 75) },
   { id: 'bass', name: 'Bass Boost', bands: mb(500, 400, 250, 100, 0, -50, 0, 100, 200, 300) },
   { id: 'clarity', name: 'Pure Clarity', bands: mb(-100, -50, 0, 50, 150, 250, 300, 250, 150, 100) },

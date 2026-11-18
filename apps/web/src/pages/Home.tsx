@@ -2,7 +2,7 @@ import { useHome } from '@/lib/api';
 import { useHistory } from '@/lib/db';
 import { ShelfRow } from '@/components/Cards';
 import { ErrorState, ShelvesSkeleton } from '@/components/Page';
-import type { Shelf } from '@echo/shared';
+import type { Shelf } from '@resona/shared';
 
 function greeting() {
   const h = new Date().getHours();

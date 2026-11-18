@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Mic, Play, Search, X } from 'lucide-react';
 import { cancelVoice, listen, stopVoice, useVoice } from '@/voice/voiceSearch';
-import type { Card } from '@echo/shared';
+import type { Card } from '@resona/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { useSettings } from '@/lib/settings';
+import { Switch } from '@/components/ui/switch';
 import { useSuggestions } from '@/lib/api';
 import { usePlayer } from '@/player/store';
 import { cn } from '@/lib/utils';
@@ -187,6 +190,7 @@ export function TopBar() {
           </div>
         )}
       </form>
+      <FlacModeToggle />
     </header>
   );
 }
@@ -221,5 +225,19 @@ function VoicePanel() {
         {v.phase === 'error' ? 'Close' : 'Cancel'}
       </button>
     </div>
+  );
+}
+
+/** FLAC Mode: play only lossless FLAC (songs without a FLAC version are skipped). */
+function FlacModeToggle() {
+  const on = useSettings((s) => s.flacMode);
+  return (
+    <label
+      title={on ? 'FLAC Mode is on: only lossless FLAC plays' : 'Turn on to play only lossless FLAC'}
+      className={cn('no-drag flex h-10 shrink-0 cursor-pointer items-center gap-2.5 rounded-full px-3.5 text-sm font-semibold', on ? 'bg-seed/20 text-seed-soft' : 'bg-glass text-text-muted hover:text-text')}
+    >
+      FLAC Mode
+      <Switch checked={on} onCheckedChange={(v) => { useSettings.getState().setFlacMode(v); toast(v ? 'FLAC Mode on: only lossless FLAC will play' : 'FLAC Mode off'); }} aria-label="FLAC Mode" />
+    </label>
   );
 }

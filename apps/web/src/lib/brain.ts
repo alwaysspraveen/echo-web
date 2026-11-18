@@ -1,11 +1,11 @@
-// Echo Brain, ported from Echo for Android (generate/LocalTasteEngine.kt + RecommendationEngine.kt):
+// Resona Brain: local recommendations from your listening stats:
 // per-song listening stats → taste score → recommendations added to the queue as it runs out.
 import { create } from 'zustand';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import { db, type SongStats } from './db';
 import { fetchRadio } from './api';
 
-// Same constants as Android.
+// Scoring constants.
 const PLAY_WEIGHT = 2.0;
 const SKIP_PENALTY = 3.0;
 const LIKED_BONUS = 5.0;
@@ -14,7 +14,7 @@ const TIME_OF_DAY_BONUS = 1.3;
 const SIMILAR_TRACK_BONUS = 2.0;
 const SIMILAR_ARTIST_BONUS = 1.0;
 const WEEK = 7 * 86_400_000;
-/** Android counts a skip when you move on before hearing 85% of a song. */
+/** A skip is moving on before hearing 85% of a song. */
 export const COMPLETION_RATIO = 0.85;
 
 export function timeOfDay(hour = new Date().getHours()) {
@@ -34,7 +34,7 @@ export function scoreStats(s: Pick<SongStats, 'totalPlayTimeMs' | 'skipCount' | 
   return Math.max(0, score * hourBonus);
 }
 
-/** Android's candidate filter: drop songs you skip and don't actually listen to. */
+/** Candidate filter: drop songs you skip and don't actually listen to. */
 export const passesFilter = (s: SongStats) => s.skipCount < 2 || s.totalPlayTimeMs > 45_000;
 
 const plain = (t: Track): Track => ({ id: t.id, title: t.title, artists: t.artists, album: t.album, duration: t.duration, thumbnail: t.thumbnail });
@@ -51,12 +51,12 @@ export async function recordListen(track: Track, listenedMs: number, skipped: bo
   });
 }
 
-/** Songs Echo Brain added (shown with a badge in the queue). */
+/** Songs Resona Brain added (shown with a badge in the queue). */
 export const useBrainAdded = create<{ ids: Set<string> }>(() => ({ ids: new Set() }));
 
 /**
  * Picks songs to add after `current`: candidates come from the radio of the current song and of
- * your top-scored song, scored with your stats plus Android's similarity bonuses.
+ * your top-scored song, scored with your stats plus similarity bonuses.
  */
 export async function recommend(current: Track, exclude: Set<string>, count = 5): Promise<Track[]> {
   const [stats, likedRows] = await Promise.all([db.stats.toArray(), db.liked.toArray()]);

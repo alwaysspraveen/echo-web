@@ -1,6 +1,6 @@
 // Pure queue operations used by the player store. Each returns the new queue and the new index
 // of the currently playing track so the store never loses its place.
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 
 export type RepeatMode = 'off' | 'all' | 'one';
 

@@ -4,7 +4,7 @@ import { hexToHsl, paletteFromSeed, vibrantColor } from './theme';
 const px = (...rgb: [number, number, number][]) => new Uint8ClampedArray(rgb.flatMap(([r, g, b]) => [r, g, b, 255]));
 
 describe('theme', () => {
-  it('reads the Echo seed hue', () => {
+  it('reads the default seed hue', () => {
     const [h, s] = hexToHsl('#ED5564');
     expect(Math.round(h)).toBe(354);
     expect(s).toBeGreaterThan(70);

@@ -128,7 +128,7 @@ export function PlayerBar() {
 
       {/* Extras */}
       <div className="flex items-center justify-end gap-1">
-        {track && (
+        {track && !track.flac && (
           <DownloadMenu track={track}>
             <button aria-label="Download" className="grid size-9 place-items-center rounded-full text-text-muted hover:bg-accent hover:text-text data-[state=open]:bg-accent data-[state=open]:text-text">
               <DownloadStateIcon track={track} className="size-[18px]" />
@@ -164,7 +164,7 @@ export function PlayerBar() {
   );
 }
 
-/** Cast button (Echo for Android's CastButton): device picker, or the session when casting. */
+/** Cast button: device picker, or the session when casting. */
 function CastButton() {
   const status = useCast((s) => s.status);
   if (!castBridge) return null;

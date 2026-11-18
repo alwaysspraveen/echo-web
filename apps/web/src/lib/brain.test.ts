@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { passesFilter, scoreStats, timeOfDay } from './brain';
 
 const base = { totalPlayTimeMs: 0, skipCount: 0, lastPlayedAt: 0 };
-describe('Echo Brain scoring (same as Android)', () => {
+describe('Resona Brain scoring', () => {
   it('time of day buckets', () => {
     expect([timeOfDay(7), timeOfDay(13), timeOfDay(19), timeOfDay(2)]).toEqual(['morning', 'afternoon', 'evening', 'night']);
   });

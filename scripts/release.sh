@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publishes a new Echo Music desktop version. Installed apps (Mac and Windows) offer it as an update.
+# Publishes a new Resona desktop version. Installed apps (Mac and Windows) offer it as an update.
 #
 #   ./scripts/release.sh 0.2.1
 #
@@ -34,22 +34,22 @@ step "Building Windows (installer)"
 
 cd "$DESKTOP/release"
 FILES=(
-  "Echo-Music-$VERSION-arm64.dmg"
-  "Echo-Music-$VERSION-arm64.dmg.blockmap"
-  "Echo-Music-Setup-$VERSION.exe"
-  "Echo-Music-Setup-$VERSION.exe.blockmap"
+  "Resona-$VERSION-arm64.dmg"
+  "Resona-$VERSION-arm64.dmg.blockmap"
+  "Resona-Setup-$VERSION.exe"
+  "Resona-Setup-$VERSION.exe.blockmap"
   "latest.yml"
 )
 for f in "${FILES[@]}"; do [ -f "$f" ] || { echo "Missing build output: $f" >&2; exit 1; }; done
 
 # Fixed-name copies so the README's "latest/download" links always point at the newest version.
-cp -f "Echo-Music-$VERSION-arm64.dmg" Echo-Music-mac.dmg
-cp -f "Echo-Music-Setup-$VERSION.exe" Echo-Music-windows.exe
-FILES+=(Echo-Music-mac.dmg Echo-Music-windows.exe)
+cp -f "Resona-$VERSION-arm64.dmg" Resona-mac.dmg
+cp -f "Resona-Setup-$VERSION.exe" Resona-windows.exe
+FILES+=(Resona-mac.dmg Resona-windows.exe)
 
 step "Publishing GitHub release v$VERSION"
-gh release create "v$VERSION" "${FILES[@]}" --repo "$REPO" --title "Echo Music $VERSION" \
-  --notes "Echo Music $VERSION for macOS (Apple Silicon) and Windows. Installed apps update automatically."
+gh release create "v$VERSION" "${FILES[@]}" --repo "$REPO" --title "Resona $VERSION" \
+  --notes "Resona $VERSION for macOS (Apple Silicon) and Windows. Installed apps update automatically."
 
 step "Done"
 echo "Released https://github.com/$REPO/releases/tag/v$VERSION"

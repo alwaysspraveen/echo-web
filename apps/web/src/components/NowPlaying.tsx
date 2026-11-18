@@ -13,7 +13,7 @@ import { ArtistLinks } from './TrackList';
 
 /**
  * Full-window "now playing" stage: the artwork blurred deep behind everything (the web take on
- * Echo's full-screen player glass), artwork on the left, big synced lyrics on the right.
+ * the full-screen player glass), artwork on the left, big synced lyrics on the right.
  */
 export function NowPlaying() {
   const open = useUi((s) => s.nowPlaying);
@@ -59,7 +59,7 @@ export function NowPlaying() {
 
       {/* On macOS desktop the window buttons sit top-left; .np-stage moves content below them. */}
       <div className="drag-area absolute inset-x-0 top-0 h-14" aria-hidden />
-      {/* Song / Video switch, like the Android player. */}
+      {/* Song / Video switch. */}
       <div className="absolute top-5 left-1/2 z-10 flex -translate-x-1/2 rounded-full bg-white/10 p-1 backdrop-blur" role="radiogroup" aria-label="Show">
         {([['Song', false], ['Video', true]] as const).map(([label, on]) => (
           <button

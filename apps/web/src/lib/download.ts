@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import { downloadUrl } from './api';
 import { useSettings } from './settings';
 

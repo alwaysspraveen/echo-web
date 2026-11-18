@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { AudioLines, Heart, MoreHorizontal, Play } from 'lucide-react';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useIsLiked } from '@/lib/db';

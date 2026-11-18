@@ -24,11 +24,11 @@ const newer = (a: string, b: string) => {
 let busy = false;
 
 async function checkMac(manual: boolean) {
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'EchoMusic' } });
+  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Resona' } });
   if (!res.ok) { if (manual) dialog.showMessageBox({ message: "Couldn't check for updates. Try again later." }); return; }
   const rel = (await res.json()) as { tag_name: string; html_url: string; assets: { name: string; browser_download_url: string }[] };
   if (!newer(rel.tag_name, app.getVersion())) {
-    if (manual) dialog.showMessageBox({ message: `Echo Music ${app.getVersion()} is the latest version.` });
+    if (manual) dialog.showMessageBox({ message: `Resona ${app.getVersion()} is the latest version.` });
     return;
   }
   const dmg = rel.assets.find((a) => a.name.endsWith(`-${process.arch}.dmg`)) ?? rel.assets.find((a) => a.name.endsWith('.dmg'));
@@ -37,8 +37,8 @@ async function checkMac(manual: boolean) {
     buttons: ['Update now', 'Later'],
     defaultId: 0,
     cancelId: 1,
-    message: `Echo Music ${rel.tag_name.replace(/^v/, '')} is available`,
-    detail: `You have ${app.getVersion()}. Echo will download the update, restart and open the new version.`,
+    message: `Resona ${rel.tag_name.replace(/^v/, '')} is available`,
+    detail: `You have ${app.getVersion()}. Resona will download the update, restart and open the new version.`,
   });
   if (response !== 0) return;
   if (!dmg) { shell.openExternal(rel.html_url); return; }
@@ -49,17 +49,18 @@ async function checkMac(manual: boolean) {
   if (!dl.ok || !dl.body) throw new Error(`Download failed (${dl.status})`);
   await pipeline(Readable.fromWeb(dl.body as never), createWriteStream(file));
 
-  // The running bundle, e.g. /Applications/Echo Music.app
+  // The running bundle, e.g. /Applications/Resona.app
   const bundle = path.resolve(process.execPath, '../../..');
   const script = path.join(dir, 'install.sh');
   await writeFile(script, `#!/bin/bash
-# Waits for Echo Music to quit, replaces it with the downloaded version, and reopens it.
+# Waits for the app to quit, replaces it with the downloaded version (named as in the .dmg), and reopens it.
 while kill -0 ${process.pid} 2>/dev/null; do sleep 0.5; done
 MNT=$(hdiutil attach -nobrowse -readonly "${file}" | grep -o "/Volumes/.*" | head -1)
 APP=$(ls -d "$MNT"/*.app | head -1)
-if [ -n "$APP" ]; then rm -rf "${bundle}" && ditto "$APP" "${bundle}"; fi
+TARGET="${bundle}"
+if [ -n "$APP" ]; then TARGET="$(dirname "${bundle}")/$(basename "$APP")"; rm -rf "${bundle}" "$TARGET" && ditto "$APP" "$TARGET"; fi
 hdiutil detach "$MNT" -quiet
-open "${bundle}"
+open "$TARGET"
 rm -rf "${dir}"
 `, { mode: 0o755 });
   spawn('/bin/bash', [script], { detached: true, stdio: 'ignore' }).unref();
@@ -73,13 +74,13 @@ async function checkWindows(manual: boolean) {
   autoUpdater.on('update-available', async (info) => {
     const { response } = await dialog.showMessageBox({
       type: 'info', buttons: ['Update now', 'Later'], defaultId: 0, cancelId: 1,
-      message: `Echo Music ${info.version} is available`,
-      detail: `You have ${app.getVersion()}. Echo will download the update and restart.`,
+      message: `Resona ${info.version} is available`,
+      detail: `You have ${app.getVersion()}. Resona will download the update and restart.`,
     });
     if (response === 0) autoUpdater.downloadUpdate();
   });
   autoUpdater.on('update-downloaded', () => autoUpdater.quitAndInstall(true, true));
-  autoUpdater.on('update-not-available', () => { if (manual) dialog.showMessageBox({ message: `Echo Music ${app.getVersion()} is the latest version.` }); });
+  autoUpdater.on('update-not-available', () => { if (manual) dialog.showMessageBox({ message: `Resona ${app.getVersion()} is the latest version.` }); });
   autoUpdater.on('error', (e) => { if (manual) dialog.showMessageBox({ message: `Couldn't update: ${e.message}` }); });
   await autoUpdater.checkForUpdates();
 }

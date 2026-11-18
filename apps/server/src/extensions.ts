@@ -1,9 +1,9 @@
-// Audio extensions (320 kbps / lossless), ported from Echo for Android's ExtensionManager.kt.
+// Audio extensions (320 kbps / lossless), with strict title/artist matching.
 // An extension server exposes:
 //   GET {base}/manifest.json        → { id, name, version }
 //   GET {base}/search?q=…           → { tracks: [{ id, title, artist, duration }] }
 //   GET {base}/stream/{id}?quality=LOSSLESS → { url, format, quality, codec, … }
-// The match is strict (same rules as Android) so a wrong song is never played; no match → YouTube.
+// The match is strict so a wrong song is never played; no match → YouTube.
 import { cleanTitle } from './lyrics.ts';
 
 export interface AddonTrack { id: string; title: string; artist: string; duration?: number }
@@ -35,7 +35,7 @@ function artistMatches(want: string[], got: string[]) {
   return w.length > 0 && g.length > 0 && w.some((t) => g.includes(t));
 }
 
-/** Same scoring as Android's selectBestMatch. */
+/** Picks the result that really is the same song (title, qualifiers, artist, duration). */
 export function selectBestMatch(tracks: AddonTrack[], title: string, artist: string, durationMs?: number): AddonTrack | null {
   const want = tokenize(title);
   if (!want.length) return null;
@@ -127,3 +127,30 @@ export const isAllowedAudio = (url: string) => {
   const at = allowedAudio.get(url);
   return at !== undefined && Date.now() - at < 6 * 60 * 60_000;
 };
+
+// ---------- Lossless section: search the FLAC catalog and play straight from it ----------
+export const LOSSLESS_BASE = 'https://lossless-extension-eight-sepia.vercel.app';
+interface LosslessHit extends AddonTrack { artworkURL?: string; format?: string; audioQuality?: string }
+
+/** FLAC tracks only (anything the catalog marks as lossy is left out). */
+export async function searchLossless(q: string) {
+  const found = await getJson<{ tracks?: LosslessHit[] }>(`${LOSSLESS_BASE}/search?q=${encodeURIComponent(q)}`, 15000);
+  return (found?.tracks ?? [])
+    .filter((t) => t?.id && t.title && (/flac/i.test(t.format ?? '') || /lossless|hi_?res/i.test(t.audioQuality ?? '')))
+    .map((t) => ({
+      id: `flac:${t.id}`,
+      flac: t.id,
+      title: t.title,
+      artists: (t.artist ?? '').split(/,\s*/).filter(Boolean).map((name) => ({ name })),
+      duration: t.duration,
+      thumbnail: t.artworkURL,
+    }));
+}
+
+/** The FLAC stream for a catalog id (allowed through /api/extension/audio). */
+export async function losslessStream(id: string): Promise<AddonStream | null> {
+  const stream = await getJson<AddonStream>(`${LOSSLESS_BASE}/stream/${encodeURIComponent(id)}?quality=LOSSLESS`, 15000);
+  if (!stream?.url || !/^https?:\/\//.test(stream.url)) return null;
+  allowAudio(stream.url);
+  return stream;
+}

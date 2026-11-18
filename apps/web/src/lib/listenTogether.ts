@@ -1,14 +1,14 @@
-// Listen Together: the Android Echo app's shared-listening protocol, so laptops (web/desktop) and
+// Listen Together: a shared-listening protocol, so laptops (web/desktop) and
 // phones can be in the same room. Protobuf messages in an Envelope over a WebSocket, on the same
-// public servers the Android app uses. Wire format: Echo-Music app/src/main/proto/listentogether.proto.
+// public Listen Together servers. Wire format: protobuf (listentogether.proto).
 import protobuf from 'protobufjs';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { toast } from 'sonner';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import protoSource from './listentogether.proto?raw';
 
-/** Same default and server list as the Android app (ListenTogetherServers.kt). */
+/** Default room server and the published server list. */
 export const DEFAULT_LT_SERVER = 'wss://metroserverx.meowery.eu/ws';
 const SERVER_LIST_URL = 'https://raw.githubusercontent.com/EchoMusicApp/Echo-Music/refs/heads/main/app/server.json';
 
@@ -308,7 +308,7 @@ export function sendAction(a: PlaybackAction) { send('playback_action', a as unk
 export function sendBufferReady(trackId: string) { send('buffer_ready', { trackId }); }
 export function requestSync() { send('request_sync'); }
 
-/** Picks up the server list the Android app publishes, so both use the same default. */
+/** Picks up the published server list, so phones and laptops use the same default. */
 export async function refreshServerList() {
   try {
     const res = await fetch(SERVER_LIST_URL, { cache: 'no-store' });

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Builds the Windows installer for the Echo Music desktop app (Electron).
+# Builds the Windows installer for the Resona desktop app (Electron).
 #
 #   ./scripts/build-windows.sh
 #
-# Output: apps/desktop/release/Echo-Music-Setup-<version>.exe (64-bit, unsigned).
+# Output: apps/desktop/release/Resona-Setup-<version>.exe (64-bit, unsigned).
 # Runs on macOS, Linux or Windows (Git Bash). Needs Node.js 22+ and internet access the first
 # time (to download Electron for Windows and a Windows ffmpeg build).
 set -euo pipefail

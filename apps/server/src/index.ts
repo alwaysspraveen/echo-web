@@ -28,13 +28,13 @@ function listen(port: number, attemptsLeft: number) {
       console.warn(`Port ${port} is not available (${err.code}), trying ${port + 1}...`);
       listen(port + 1, attemptsLeft - 1);
     } else {
-      console.error(`\nEcho server could not start: ${err.message}\n`);
+      console.error(`\nResona server could not start: ${err.message}\n`);
       process.exit(1);
     }
   });
   server.listen(port, hostname, () => {
     try { writeFileSync(portFile, String(port)); } catch { /* read-only location: fine outside dev */ }
-    console.log(`Echo server on http://${hostname}:${port}`);
+    console.log(`Resona server on http://${hostname}:${port}`);
   });
 }
 

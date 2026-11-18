@@ -25,7 +25,7 @@ export function boundedRange(range: string | undefined, size: number): string {
   return `bytes=${start}-${end}`;
 }
 
-// Same ordering as Echo-Music's YTPlayerUtils.STREAM_FALLBACK_CLIENTS. Without a PO token most
+// Client fallback order. Without a PO token most
 // clients' URLs serve only the first ~1 MiB; VISIONOS serves the whole file. IOS is a last resort
 // because a preview beats silence.
 const CLIENTS = ['VISIONOS', 'ANDROID_VR', 'IOS'] as const;

@@ -1,6 +1,6 @@
 import { Link, useParams, useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import type { Shelf } from '@echo/shared';
+import type { Shelf } from '@resona/shared';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShelfRow } from '@/components/Cards';
 import { ErrorState, ShelvesSkeleton } from '@/components/Page';

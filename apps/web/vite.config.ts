@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 /**
- * Forwards /api/* to the Echo server during development. The server may not get port 8787 (it is
+ * Forwards /api/* to the Resona server during development. The server may not get port 8787 (it is
  * often reserved on Windows), so it writes the port it actually got to apps/server/.dev-port and
  * we read that on every request. Responses are piped, so audio streaming and seeking work.
  */
@@ -27,9 +27,9 @@ function echoApi(): Plugin {
           },
         );
         upstream.on('error', () => {
-          // Plain-text 502: the web app shows "Can't reach the Echo server…" for this.
+          // Plain-text 502: the web app shows "Can't reach the Resona server…" for this.
           if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'text/plain' });
-          res.end('Echo server is not running');
+          res.end('Resona server is not running');
         });
         res.on('close', () => upstream.destroy());
         req.pipe(upstream);

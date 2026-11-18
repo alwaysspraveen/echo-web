@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import { insertNext, moveItem, nextIndex, prevIndex, removeAt, shuffleFrom, type RepeatMode } from '@/lib/queue';
 
 interface PlayerState {

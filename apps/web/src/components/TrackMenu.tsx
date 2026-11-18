@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { Disc3, FileAudio, HardDriveDownload, Heart, HeartOff, ListEnd, ListPlus, ListStart, Plus, Radio, Trash2, UserRound } from 'lucide-react';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import {
   ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger,
 } from '@/components/ui/context-menu';
@@ -72,7 +72,7 @@ export function TrackMenuItems({ track, kind, onRemove, removeLabel = 'Remove fr
     <>
       <M.Item onSelect={() => { usePlayer.getState().playNext(track); toast('Plays next'); }}><ListStart />Play next</M.Item>
       <M.Item onSelect={() => { usePlayer.getState().addToQueue([track]); toast('Added to queue'); }}><ListEnd />Add to queue</M.Item>
-      <M.Item onSelect={() => startRadio(track)}><Radio />Start radio</M.Item>
+      {!track.flac && <M.Item onSelect={() => startRadio(track)}><Radio />Start radio</M.Item>}
       <M.Separator />
       <M.Item onSelect={() => toggleLike(track).then((l) => toast(l ? 'Added to Liked songs' : 'Removed from Liked songs'))}>
         {liked ? <><HeartOff />Remove from Liked songs</> : <><Heart />Add to Liked songs</>}
@@ -85,15 +85,15 @@ export function TrackMenuItems({ track, kind, onRemove, removeLabel = 'Remove fr
           {playlists.map((p) => <M.Item key={p.id} onSelect={() => add(p.id, p.name)}>{p.name}</M.Item>)}
         </M.SubContent>
       </M.Sub>
-      <M.Separator />
-      {progress !== undefined ? (
+      {!track.flac && <M.Separator />}
+      {track.flac ? null : progress !== undefined ? (
         <M.Item onSelect={() => {}}><HardDriveDownload />Downloading for offline… {Math.round(progress * 100)}%</M.Item>
       ) : offline ? (
         <M.Item variant="destructive" onSelect={() => removeOffline(track)}><Trash2 />Remove offline download</M.Item>
       ) : (
         <M.Item onSelect={() => saveOffline(track)}><HardDriveDownload />Save for offline</M.Item>
       )}
-      <M.Item onSelect={() => downloadTrack(track)}><FileAudio />{fileLabel}</M.Item>
+      {!track.flac && <M.Item onSelect={() => downloadTrack(track)}><FileAudio />{fileLabel}</M.Item>}
       {onRemove && <M.Item variant="destructive" onSelect={onRemove}><Trash2 />{removeLabel}</M.Item>}
       {(artist || track.album?.id) && <M.Separator />}
       {artist?.id && <M.Item onSelect={() => navigate(`/artist/${artist.id}`)}><UserRound />Go to artist</M.Item>}

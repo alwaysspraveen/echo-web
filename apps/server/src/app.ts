@@ -5,7 +5,7 @@ import { QUALITIES, streamAudio, type Quality } from './stream.ts';
 import { findLyrics } from './lyrics.ts';
 import { allowedArtUrl, fetchArt } from './art.ts';
 import { downloadTrack } from './download.ts';
-import { isAllowedAudio, manifestName, normalizeBase, resolveExtension } from './extensions.ts';
+import { isAllowedAudio, manifestName, normalizeBase, resolveExtension, losslessStream, searchLossless } from './extensions.ts';
 import { findCanvas } from './canvas.ts';
 
 const VIDEO_ID = /^[\w-]{11}$/;
@@ -25,12 +25,12 @@ api.get('/moods/:params', async (c) => {
   return c.json(await getMoodCategory(decodeURIComponent(params)));
 });
 
-// Audio extensions (320 kbps / lossless), like Echo for Android's Extension Sources.
+// Audio extensions (320 kbps / lossless), (Settings → Extensions).
 api.get('/extension/manifest', async (c) => {
   const base = normalizeBase(c.req.query('base'));
   if (!base) return c.json({ error: 'Enter an http(s) address' }, 400);
   const name = await manifestName(base);
-  return name ? c.json({ base, name }) : c.json({ error: "That server didn't answer like an Echo extension (no manifest.json)" }, 404);
+  return name ? c.json({ base, name }) : c.json({ error: "That server didn't answer like an audio extension (no manifest.json)" }, 404);
 });
 api.get('/extension/resolve', async (c) => {
   const base = normalizeBase(c.req.query('base'));
@@ -41,11 +41,30 @@ api.get('/extension/resolve', async (c) => {
   return stream ? c.json(stream) : c.json({ error: 'Not available on this extension' }, 404);
 });
 
+// Lossless section: FLAC-only search and playback.
+api.get('/lossless/search', async (c) => {
+  const q = c.req.query('q')?.trim().slice(0, 200);
+  if (!q) return c.json({ tracks: [] });
+  return c.json({ tracks: await searchLossless(q) });
+});
+api.get('/lossless/stream/:id', async (c) => {
+  const id = c.req.param('id');
+  if (!/^[\w-]{1,200}$/.test(id)) return c.json({ error: 'Bad id' }, 400);
+  const stream = await losslessStream(id);
+  return stream ? c.json(stream) : c.json({ error: 'Not available in FLAC right now' }, 404);
+});
+
 // Streams an extension's audio through this server (same-origin, so the equalizer can process it).
 api.get('/extension/audio', async (c) => {
   const url = c.req.query('u') ?? '';
   if (!isAllowedAudio(url)) return c.json({ error: 'Unknown audio link' }, 403);
-  const upstream = await fetch(url, { headers: c.req.header('range') ? { Range: c.req.header('range')! } : {}, signal: c.req.raw.signal });
+  // FLAC hosts rate-limit (429) or are briefly busy (503): wait and retry instead of failing the song.
+  let upstream = await fetch(url, { headers: c.req.header('range') ? { Range: c.req.header('range')! } : {}, signal: c.req.raw.signal });
+  for (let attempt = 1; (upstream.status === 429 || upstream.status === 503) && attempt <= 3; attempt++) {
+    const retryAfter = Number(upstream.headers.get('retry-after'));
+    await new Promise((r) => setTimeout(r, Math.min(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1500 * attempt, 5000)));
+    upstream = await fetch(url, { headers: c.req.header('range') ? { Range: c.req.header('range')! } : {}, signal: c.req.raw.signal });
+  }
   const headers = new Headers({ 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' });
   for (const h of ['content-type', 'content-length', 'content-range']) { const v = upstream.headers.get(h); if (v) headers.set(h, v); }
   if (!upstream.headers.get('content-type') || upstream.headers.get('content-type') === 'application/octet-stream') {

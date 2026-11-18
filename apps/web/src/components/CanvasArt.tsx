@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type Hls from 'hls.js';
-import type { Track } from '@echo/shared';
+import type { Track } from '@resona/shared';
 import { audio } from '@/player/audio';
 import { cn } from '@/lib/utils';
 
 /**
- * Canvas (as in Echo for Android): Apple Music motion artwork for the song's album, played muted
+ * Canvas: Apple Music motion artwork for the song's album, played muted
  * and looping inside the artwork square, following play/pause. Nothing shows if there is none.
  */
 export function CanvasArt({ track, className, style }: { track: Track; className?: string; style?: React.CSSProperties }) {

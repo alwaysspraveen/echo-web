@@ -1,10 +1,8 @@
-// Canvas: Apple Music motion artwork for the playing song, ported from Echo for Android
-// (applecanvas/AppleMusicCanvasProvider.kt + canvas/AppleMusicTokenProvider.kt). The Apple Music web
-// player's public read-only token is read from its JS bundle; the song is searched on the catalog
+// Canvas: Apple Music motion artwork for the playing song. The Apple Music web player's public read-only token is read from its JS bundle; the song is searched on the catalog
 // with ?extend=editorialVideo and the album's motion video (an HLS .m3u8) is returned.
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
 const AMP = 'https://amp-api.music.apple.com';
-/** Same preference order as Android. */
+/** Preference order for the video renditions. */
 const MOTION_KEYS = ['motionSquareVideo1x1', 'motionDetailSquare', 'motionTallVideo3x4', 'motionDetailTall'];
 
 let token: { value: string; exp: number } | null = null;

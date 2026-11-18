@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { Pause, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Echo for Android's play button: a rounded square while paused that morphs into a slowly
-// spinning 9-wave "cookie" while playing (WavyShape in Player.kt: 9 sides, 8% indent, one turn
+// The play button: a rounded square while paused that morphs into a slowly
+// spinning 9-wave "cookie" while playing (9 sides, 8% indent, one turn
 // every 8 s, 300 ms morph), and springs to 90% when pressed.
 const SIDES = 9;
 const INDENT = 0.08;
@@ -76,7 +76,7 @@ export function PlayPauseButton({ playing, disabled, onClick, size = 44, classNa
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 overflow-visible" aria-hidden>
         <path ref={path} fill={fill} />
       </svg>
-      {/* Like Android, the button always shows play/pause, even while buffering. */}
+      {/* The button always shows play/pause, even while buffering. */}
       <span key={playing ? 'p' : 's'} className={cn('relative animate-in zoom-in-50 fade-in-0 duration-200', iconClass)}>
         {playing ? (
           <Pause className="fill-current" style={{ width: icon, height: icon }} />

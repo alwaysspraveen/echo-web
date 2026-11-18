@@ -37,7 +37,7 @@ function QueueRow({ track, active, onPlay, onRemove }: { track: ReturnType<typeo
           <span className={cn('block truncate text-sm font-medium', active && 'text-seed-soft')}>{track.title}</span>
           <span className="block truncate text-xs text-text-muted">
             {useBrainAdded.getState().ids.has(track.id) && (
-              <span className="mr-1.5 rounded bg-seed/20 px-1 text-[10px] font-bold text-seed-soft" title="This song was dynamically added by Echo Brain based on your listening patterns, the current song's genre, and your library's vibes.">ECHO BRAIN</span>
+              <span className="mr-1.5 rounded bg-seed/20 px-1 text-[10px] font-bold text-seed-soft" title="This song was dynamically added by Resona Brain based on your listening patterns, the current song's genre, and your library's vibes.">ECHO BRAIN</span>
             )}
             {track.artists.map((a) => a.name).join(', ')}
           </span>

@@ -1,7 +1,7 @@
-import { parseLrc, type Lyrics } from '@echo/shared';
+import { parseLrc, type Lyrics } from '@resona/shared';
 
 const LRCLIB = 'https://lrclib.net/api';
-const HEADERS = { 'User-Agent': 'EchoWeb/0.1 (https://github.com/EchoMusicApp/Echo-Music)' };
+const HEADERS = { 'User-Agent': 'Resona/0.2 (https://github.com/alwaysspraveen/echo-web)' };
 
 interface LrclibRecord {
   trackName: string;

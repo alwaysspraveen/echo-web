@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { fetchRadio, resolveExtensionStream, streamUrl } from '@/lib/api';
+import { fetchRadio, flacStreamFor, resolveExtensionStream, searchLossless, streamUrl } from '@/lib/api';
 import { useNowSource } from './source';
 import { COMPLETION_RATIO, recommend, recordListen, useBrainAdded } from '@/lib/brain';
 import { recordPlay, toggleLike } from '@/lib/db';
@@ -35,6 +35,8 @@ export function PlayerEngine() {
   const offlineUrl = useRef<string | null>(null);
   // True while the current source is an extension (FLAC / 320 kbps) stream.
   const onExtension = useRef(false);
+  // FLAC Mode: songs skipped in a row because they have no FLAC version.
+  const flacMisses = useRef(0);
 
   // Load a new source when the current track changes.
   useEffect(() => {
@@ -42,7 +44,7 @@ export function PlayerEngine() {
       audio.removeAttribute('src');
       audio.load();
       loadedId.current = null;
-      document.title = 'Echo Music';
+      document.title = 'Resona';
       return;
     }
     if (loadedId.current === track.id) return;
@@ -55,6 +57,38 @@ export function PlayerEngine() {
       if (loadedId.current !== id) return; // user already moved on
       useNowSource.setState({ label: blob ? 'Downloaded' : null });
       onExtension.current = false;
+      // FLAC Mode (or a song from the FLAC catalog): play only the FLAC version, never YouTube.
+      if (!blob && (useSettings.getState().flacMode || track.flac)) {
+        if (offlineUrl.current) { const old = offlineUrl.current; setTimeout(() => URL.revokeObjectURL(old), 20_000); offlineUrl.current = null; }
+        switching.current = true;
+        audio.removeAttribute('src');
+        audio.load();
+        useNowSource.setState({ label: 'FLAC…' });
+        flacStreamFor(track).catch(() => null).then((ext) => {
+          if (loadedId.current !== id) return;
+          if (!ext) {
+            useNowSource.setState({ label: null });
+            flacMisses.current++;
+            if (flacMisses.current >= 8) {
+              flacMisses.current = 0;
+              usePlayer.getState().setPlaying(false);
+              toast.error('FLAC Mode: none of the next songs are available in FLAC. Try a different album or artist.');
+              return;
+            }
+            toast(`"${track.title}" isn't available in FLAC. Skipping.`);
+            usePlayer.getState().next(false);
+            return;
+          }
+          flacMisses.current = 0;
+          switching.current = true;
+          audio.src = ext.url;
+          onExtension.current = true;
+          useNowSource.setState({ label: [ext.quality || ext.streamQuality || ext.audioQuality || 'LOSSLESS', ext.codec || ext.format || 'FLAC'].filter(Boolean).join(' · ').toUpperCase() });
+          if (!restoring || usePlayer.getState().playing) audio.play().catch(() => {});
+        });
+        document.title = `${track.title} · ${artistLine(track.artists)}`;
+        return;
+      }
       // Extensions (Settings → Extensions): start right away from YouTube, and when an extension has
       // this song in higher quality, switch to it at the same position (seamless upgrade).
       const { extensions, preferExtension, quality } = useSettings.getState();
@@ -111,7 +145,7 @@ export function PlayerEngine() {
     audio.muted = muted;
   }, [volume, muted]);
 
-  // Echo Brain stats (as on Android): listening time per song, and a skip when you move on before 85%.
+  // Resona Brain stats: listening time per song, and a skip when you move on before 85%.
   useEffect(() => {
     let current = usePlayer.getState().queue[usePlayer.getState().index];
     let listened = 0;
@@ -143,7 +177,7 @@ export function PlayerEngine() {
     return () => { unsub(); audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('ended', onEnded); audio.removeEventListener('seeked', onSeeked); window.removeEventListener('pagehide', flush); };
   }, []);
 
-  // Crossfade (Android: Settings → Crossfade, off by default, 5 s): near the end of a song, keep its
+  // Crossfade (Settings → Crossfade, off by default, 5 s): near the end of a song, keep its
   // tail playing on a second player while fading it out, and fade the next song in.
   useEffect(() => {
     let triggered = false;
@@ -174,7 +208,18 @@ export function PlayerEngine() {
     if (!track || repeat !== 'off' || index !== queueLength - 1 || radioFor === track.id) return;
     if (useLt.getState().session) return; // in Listen Together the shared queue is the queue
     const seed = track.id;
-    // Echo Brain (Settings): add songs picked from your listening stats; otherwise plain radio.
+    // FLAC catalog songs: keep going with more FLAC songs by the same artist.
+    if (track.flac) {
+      const artist = track.artists[0]?.name;
+      if (!artist) return;
+      searchLossless(artist).then((tracks) => {
+        const cur = usePlayer.getState();
+        const have = new Set(cur.queue.map((t) => t.id));
+        if (cur.queue[cur.index]?.id === seed) cur.appendRadio(seed, tracks.filter((t) => !have.has(t.id)).slice(0, 20));
+      }).catch(() => {});
+      return;
+    }
+    // Resona Brain (Settings): add songs picked from your listening stats; otherwise plain radio.
     const pick = useSettings.getState().echoBrain
       ? recommend(track, new Set(usePlayer.getState().queue.map((t) => t.id))).then((picks) => {
           if (picks.length) useBrainAdded.setState((s) => ({ ids: new Set([...s.ids, ...picks.map((p) => p.id)]) }));
@@ -212,6 +257,20 @@ export function PlayerEngine() {
       switching.current = false;
       if (!audio.getAttribute('src')) return;
       const cur = st().queue[st().index];
+      // FLAC Mode never falls back to YouTube: skip the song instead.
+      if (onExtension.current && cur && (useSettings.getState().flacMode || cur.flac)) {
+        onExtension.current = false;
+        errorStreak.current++;
+        if (errorStreak.current >= 3) {
+          errorStreak.current = 0;
+          st().setPlaying(false);
+          toast.error('The FLAC server is busy or not responding. Try again in a minute, or turn off FLAC Mode.');
+          return;
+        }
+        toast(`"${cur.title}" couldn't play in FLAC. Skipping.`);
+        st().next(false);
+        return;
+      }
       if (onExtension.current && cur) {
         // The FLAC / 320 kbps source stopped serving the file (e.g. 403 mid-song): keep playing
         // the same song from YouTube Music at the same position instead of skipping it.
@@ -227,7 +286,7 @@ export function PlayerEngine() {
       errorStreak.current++;
       if (errorStreak.current >= 3) {
         st().setPlaying(false);
-        toast.error('Playback stopped after several tracks failed. Check that the Echo server is running.');
+        toast.error('Playback stopped after several tracks failed. Check that the Resona server is running.');
         return;
       }
       toast.error(`Couldn't play "${failed?.title ?? 'this track'}". Skipping to the next one.`);

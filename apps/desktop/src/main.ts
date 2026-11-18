@@ -1,4 +1,4 @@
-// Electron main process for Echo Music.
+// Electron main process for Resona.
 //
 // The web app and its API are served through a private "app://echo" scheme handled in-process
 // by the same Hono app the local server uses. Nothing listens on a network port, and the origin
@@ -6,7 +6,7 @@
 import { app, BrowserWindow, ipcMain, Menu, MenuItem, protocol, session, shell, systemPreferences } from 'electron';
 import { checkForUpdates, startUpdateChecks } from './updater.js';
 import { Caster, type CastMediaInfo } from './cast.js';
-import { existsSync } from 'node:fs';
+import { existsSync, renameSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -25,9 +25,13 @@ const resources = app.isPackaged ? process.resourcesPath : path.resolve(import.m
 const webRoot = app.isPackaged ? path.join(resources, 'web') : path.resolve(import.meta.dirname, '../../web/dist');
 const bundledFfmpeg = path.join(resources, 'bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
 if (app.isPackaged && existsSync(bundledFfmpeg)) process.env.FFMPEG_PATH = bundledFfmpeg;
-// The Echo logo for the window (Windows/Linux) and, in dev runs, the macOS Dock.
+// The Resona logo for the window (Windows/Linux) and, in dev runs, the macOS Dock.
 const iconPath = app.isPackaged ? path.join(resources, 'icon.png') : path.resolve(import.meta.dirname, '../build/icon.png');
-app.setName('Echo Music');
+app.setName('Resona');
+// Keep using the data folder from before the app was renamed (library, likes, playlists, offline
+// downloads and settings live there), so updating to Resona keeps everything.
+const previousData = path.join(app.getPath('appData'), 'Echo Music');
+if (existsSync(previousData)) app.setPath('userData', previousData);
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png',
@@ -60,7 +64,7 @@ function createWindow() {
     height: 860,
     minWidth: 1000,
     minHeight: 640,
-    title: 'Echo Music',
+    title: 'Resona',
     icon: iconPath,
     backgroundColor: '#191113',
     autoHideMenuBar: true,
@@ -80,11 +84,24 @@ function createWindow() {
     if (!url.startsWith(ORIGIN)) { e.preventDefault(); external(url); }
   });
   // macOS (like Spotify): the close button hides the window and the music keeps playing; clicking
-  // Echo in the Dock brings it back. ⌘Q quits for real.
+  // Resona in the Dock brings it back. ⌘Q quits for real.
   mainWindow.on('close', (e) => {
     if (process.platform === 'darwin' && !quitting) { e.preventDefault(); mainWindow?.hide(); }
   });
   mainWindow.on('closed', () => { mainWindow = null; });
+}
+
+/**
+ * Apps updated from before the rename still sit at /Applications/Echo Music.app; rename the bundle
+ * to Resona.app (macOS lets a running app's bundle be renamed; the next launch uses the new name).
+ */
+function renameOldMacBundle() {
+  if (process.platform !== 'darwin' || !app.isPackaged) return;
+  const bundle = path.resolve(process.execPath, '../../..');
+  if (path.basename(bundle) !== 'Echo Music.app') return;
+  const target = path.join(path.dirname(bundle), 'Resona.app');
+  if (existsSync(target)) return;
+  try { renameSync(bundle, target); } catch { /* no permission: keep the old name */ }
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -93,16 +110,17 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', showWindow);
 
   app.whenReady().then(async () => {
+    renameOldMacBundle();
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(iconPath);
     // Load the API after FFMPEG_PATH is set. It's bundled next to this file by scripts/bundle.mjs.
     const { app: api } = await import(pathToFileURL(path.join(import.meta.dirname, 'server.js')).href);
 
-    // Google Cast (Chromecast, Google TV, Nest speakers), like Echo for Android.
+    // Google Cast (Chromecast, Google TV, Nest speakers).
     const send = (channel: string, payload: unknown) => mainWindow?.webContents.send(channel, payload);
     const caster = new Caster(
       (devices) => send('echo:cast-devices', devices),
       (status) => send('echo:cast-status', status),
-      // Cast devices get AAC (audio/mp4), as on Android.
+      // Cast devices get AAC (audio/mp4), which every Cast device plays.
       (id, range, signal) => api.fetch(new Request(`${SCHEME}://${HOST}/api/stream/${id}?q=normal`, { headers: range ? { Range: range } : {}, signal })),
     );
     ipcMain.handle('echo:cast-discover', () => { caster.startDiscovery(); return caster.listDevices(); });

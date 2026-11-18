@@ -73,7 +73,7 @@ export function SettingsDialog() {
         </section>
 
         <AppUpdates />
-        <p className="mt-4 text-center text-xs text-text-faint">Echo Music for desktop · Developed by Praveen Kumar</p>
+        <p className="mt-4 text-center text-xs text-text-faint">Resona for desktop · Developed by Praveen Kumar</p>
 
         <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Canvas</h3>
@@ -87,20 +87,31 @@ export function SettingsDialog() {
         </section>
 
         <section className="mt-2">
-          <h3 className="mb-1 font-display text-lg font-bold">Echo Brain (Beta)</h3>
+          <h3 className="mb-1 font-display text-lg font-bold">Resona Brain (Beta)</h3>
           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
             <span>
-              <span className="block font-semibold">Enable Echo Brain</span>
+              <span className="block font-semibold">Enable Resona Brain</span>
               <span className="block text-sm text-text-muted">Automatically add AI recommendations based on your listening habits.</span>
             </span>
-            <Switch checked={s.echoBrain} onCheckedChange={s.setEchoBrain} aria-label="Enable Echo Brain" />
+            <Switch checked={s.echoBrain} onCheckedChange={s.setResonaBrain} aria-label="Enable Resona Brain" />
           </label>
         </section>
 
         <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Extensions</h3>
-          <p className="mb-3 text-sm text-text-muted">Stream 320 kbps or lossless audio from an Echo extension server (for example the 320kbs-extension or lossless-extension). Songs it doesn't have play from YouTube Music as usual.</p>
+          <p className="mb-3 text-sm text-text-muted">Stream 320 kbps or lossless audio from an audio extension server (for example the 320kbs-extension or lossless-extension). Songs it doesn't have play from YouTube Music as usual.</p>
           <ExtensionsField />
+        </section>
+
+        <section className="mt-2">
+          <h3 className="mb-1 font-display text-lg font-bold">FLAC Mode</h3>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
+            <span>
+              <span className="block font-semibold">Play only lossless FLAC</span>
+              <span className="block text-sm text-text-muted">Songs without a FLAC version are skipped, and search shows only FLAC songs. Also in the top bar.</span>
+            </span>
+            <Switch checked={s.flacMode} onCheckedChange={s.setFlacMode} aria-label="Play only lossless FLAC" />
+          </label>
         </section>
 
         <SpatialAudioField />
@@ -130,7 +141,7 @@ export function SettingsDialog() {
         </section>
         <section className="mt-2">
           <h3 className="mb-1 font-display text-lg font-bold">Listen Together server</h3>
-          <p className="mb-3 text-sm text-text-muted">The same server Echo for Android uses, so phones and laptops can share rooms. It never carries audio.</p>
+          <p className="mb-3 text-sm text-text-muted">A public room server, so phones and laptops can share rooms. It never carries audio.</p>
           <JamServerField />
         </section>
       </DialogContent>
@@ -235,8 +246,8 @@ function AppUpdates() {
       <h3 className="mb-1 font-display text-lg font-bold">App updates</h3>
       <div className="flex items-center justify-between gap-3 rounded-2xl bg-glass p-3.5">
         <span>
-          <span className="block font-semibold">Echo Music {version ?? ''}</span>
-          <span className="block text-sm text-text-muted">Updates are checked automatically when Echo opens and every 6 hours.</span>
+          <span className="block font-semibold">Resona {version ?? ''}</span>
+          <span className="block text-sm text-text-muted">Updates are checked automatically when Resona opens and every 6 hours.</span>
         </span>
         <button onClick={check} disabled={checking} className="shrink-0 rounded-full bg-seed px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60">
           {checking ? 'Checking…' : 'Check for updates'}

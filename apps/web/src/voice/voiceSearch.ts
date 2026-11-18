@@ -36,7 +36,7 @@ export const cancelVoice = () => { cancelled = true; stopCurrent?.(); setV({ pha
 const micError = (e: unknown) => {
   const name = (e as { name?: string })?.name;
   return name === 'NotAllowedError' || name === 'SecurityError'
-    ? 'Microphone access is blocked. Allow it for Echo Music in your system settings, then try again.'
+    ? 'Microphone access is blocked. Allow it for Resona in your system settings, then try again.'
     : name === 'NotFoundError' ? 'No microphone found.' : 'Could not use the microphone.';
 };
 

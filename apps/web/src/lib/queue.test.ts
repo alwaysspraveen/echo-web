@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Track } from '@echo/shared';
-import { activeLineIndex, parseLrc } from '@echo/shared';
+import type { Track } from '@resona/shared';
+import { activeLineIndex, parseLrc } from '@resona/shared';
 import { insertNext, moveItem, nextIndex, prevIndex, removeAt, shuffleFrom } from './queue';
 
 const t = (id: string): Track => ({ id, title: id, artists: [] });

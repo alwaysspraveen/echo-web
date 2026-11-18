@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
-// Port of Material 3 Expressive LoadingIndicator / ContainedLoadingIndicator, which Echo for
-// Android uses (androidx.compose.material3 LoadingIndicator.kt, MaterialShapes.kt,
-// LoadingIndicatorTokens.kt). Values below are copied from those files:
+// Material 3 Expressive LoadingIndicator / ContainedLoadingIndicator for the web, using Google's
+// published Material 3 values (androidx.compose.material3 LoadingIndicator, MaterialShapes and
+// LoadingIndicatorTokens):
 //   container 48dp, full corner; active indicator 38dp
 //   uncontained colour = Primary; contained = OnPrimaryContainer on PrimaryContainer
 //   shapes SoftBurst → Cookie9Sided → Pentagon → Pill → Sunny → Cookie4Sided → Oval (loop)

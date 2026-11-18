@@ -1,5 +1,5 @@
 {
-  "name": "@echo/web",
+  "name": "@resona/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@echo/shared": "*",
+    "@resona/shared": "*",
     "@fontsource-variable/bricolage-grotesque": "5.3.0",
     "@fontsource-variable/figtree": "5.3.0",
     "@huggingface/transformers": "^4.3.0",

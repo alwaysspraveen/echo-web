@@ -1,7 +1,5 @@
-// Google Cast sender for the desktop app (what Echo for Android does with the Cast SDK, which
-// isn't available to Electron). Finds Cast devices on the local network over mDNS, talks the Cast
-// v2 protocol to them, and plays songs with Google's Default Media Receiver (CC1AD845), the same
-// receiver Android uses.
+// Google Cast sender for the desktop app (Google's Cast SDK isn't available to Electron). Finds Cast devices on the local network over mDNS, talks the Cast
+// v2 protocol to them, and plays songs with Google's Default Media Receiver (CC1AD845).
 //
 // The device fetches audio from a small HTTP server that only runs while casting. It serves only
 // /cast/<random token>/stream/<videoId> (proxied to the app's own API), nothing else.
@@ -33,7 +31,7 @@ const NS = {
   media: 'urn:x-cast:com.google.cast.media',
 };
 
-// Device type from name/model, using the keyword lists of Android's CastDevicePickerSheet.
+// Device type from its name/model (keyword match), for the right icon.
 const TV_KEYWORDS = ['tv', 'bravia', 'webos', 'tizen', 'fire tv', 'android tv', 'google tv', 'smart tv', 'display', 'shield', 'monitor', 'hisense', 'tcl', 'samsung tv', 'lg tv', 'sony tv', 'vizio', 'insignia', 'toshiba tv', 'jvc', 'philips tv', 'androidtv'];
 const SPEAKER_KEYWORDS = ['home', 'nest', 'speaker', 'audio', 'mini', 'max', 'soundbar', 'sonos', 'bose', 'jbl', 'harman', 'marshall', 'group'];
 function kindOf(name: string, model: string): CastDeviceKind {

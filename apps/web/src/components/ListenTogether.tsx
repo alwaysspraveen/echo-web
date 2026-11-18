@@ -47,7 +47,7 @@ export function ListenTogetherDialog() {
       <DialogContent className="max-w-md">
         <DialogTitle className="font-display text-2xl font-extrabold tracking-tight">Listen Together</DialogTitle>
         <DialogDescription className="text-text-muted">
-          Everyone hears the same song at the same moment, on laptops and on phones with Echo for Android.
+          Everyone hears the same song at the same moment, on laptops and phones.
         </DialogDescription>
 
         <label className="grid gap-1.5 text-sm font-medium">
@@ -72,7 +72,7 @@ export function ListenTogetherDialog() {
 
         {status === 'waiting' && <p className="text-sm text-text-muted">Waiting for the host to approve you…</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <p className="flex items-center gap-2 text-xs text-text-faint"><Smartphone className="size-3.5" />On Android: Echo → Listen Together. The same codes work both ways.</p>
+        <p className="flex items-center gap-2 text-xs text-text-faint"><Smartphone className="size-3.5" />On a phone: open Listen Together and enter the same code.</p>
       </DialogContent>
     </Dialog>
   );
@@ -95,7 +95,7 @@ export function ListenTogetherPanel() {
         <button onClick={copy} className="mt-1 flex items-center gap-2 font-display text-4xl font-extrabold tracking-[0.12em] text-white" aria-label={`Copy room code ${session.roomCode}`}>
           {session.roomCode}<Copy className="size-5 opacity-70" />
         </button>
-        <p className="mt-2 text-sm text-white/80">Friends join with this code from Echo on a laptop, or Listen Together in Echo for Android.</p>
+        <p className="mt-2 text-sm text-white/80">Friends join with this code from Resona on a laptop, or from Listen Together on a phone.</p>
       </div>
 
       {host && requests.length > 0 && (

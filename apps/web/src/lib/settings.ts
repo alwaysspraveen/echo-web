@@ -36,6 +36,8 @@ interface Settings {
   crossfadeSeconds: number;
   extensions: Extension[];
   preferExtension: boolean;
+  /** FLAC Mode: play only lossless FLAC; songs without a FLAC version are skipped. */
+  flacMode: boolean;
   echoBrain: boolean;
   canvas: boolean;
   settingsOpen: boolean;
@@ -46,7 +48,8 @@ interface Settings {
   setCrossfadeSeconds: (s: number) => void;
   setExtensions: (e: Extension[]) => void;
   setPreferExtension: (on: boolean) => void;
-  setEchoBrain: (on: boolean) => void;
+  setFlacMode: (on: boolean) => void;
+  setResonaBrain: (on: boolean) => void;
   setCanvas: (on: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
 }
@@ -61,6 +64,7 @@ export const useSettings = create<Settings>()(
       crossfadeSeconds: 5,
       extensions: DEFAULT_EXTENSIONS,
       preferExtension: true,
+      flacMode: false,
       echoBrain: false,
       canvas: true,
       settingsOpen: false,
@@ -71,14 +75,15 @@ export const useSettings = create<Settings>()(
       setCrossfadeSeconds: (crossfadeSeconds) => set({ crossfadeSeconds }),
       setExtensions: (extensions) => set({ extensions }),
       setPreferExtension: (preferExtension) => set({ preferExtension }),
-      setEchoBrain: (echoBrain) => set({ echoBrain }),
+      setFlacMode: (flacMode) => set({ flacMode }),
+      setResonaBrain: (echoBrain) => set({ echoBrain }),
       setCanvas: (canvas) => set({ canvas }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
     }),
     {
       name: 'echo-settings',
       version: 2,
-      partialize: ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds, extensions, preferExtension, echoBrain, canvas }) => ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds, extensions, preferExtension, echoBrain, canvas }),
+      partialize: ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds, extensions, preferExtension, flacMode, echoBrain, canvas }) => ({ quality, theme, downloadFormat, crossfade, crossfadeSeconds, extensions, preferExtension, flacMode, echoBrain, canvas }),
       // v0 defaulted downloads to .opus; MP3 320 is the default from v1 on.
       migrate: (state, version) => {
         let s = { ...(state as Settings) };

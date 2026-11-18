@@ -18,7 +18,7 @@ export function Sidebar() {
     <nav className="flex w-60 shrink-0 flex-col gap-1 overflow-hidden rounded-[24px] bg-glass p-3" aria-label="Main">
       <div className="drag-area sidebar-brand mb-3 flex items-center gap-2.5 px-2 pt-1">
         <img src={logo} alt="" className="size-8" />
-        <span className="font-display text-xl font-extrabold tracking-tight">Echo</span>
+        <span className="font-display text-xl font-extrabold tracking-tight">Resona</span>
       </div>
       <NavLink to="/" end className={link}><Home className="size-5" />Home</NavLink>
       <NavLink to="/search" className={link}><Search className="size-5" />Search</NavLink>

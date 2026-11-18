@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Link } from 'react-router';
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
-import type { Card, Shelf } from '@echo/shared';
+import type { Card, Shelf } from '@resona/shared';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { usePlayer } from '@/player/store';
 import { cn } from '@/lib/utils';

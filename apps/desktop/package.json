@@ -1,9 +1,9 @@
 {
-  "name": "echo-music-desktop",
-  "productName": "Echo Music",
+  "name": "resona-desktop",
+  "productName": "Resona",
   "version": "0.2.12",
-  "description": "Echo Music for desktop: YouTube Music without ads, with synced lyrics and MP3 downloads.",
-  "author": "Echo Music",
+  "description": "Resona for desktop: music without ads, with synced lyrics, lossless FLAC and downloads.",
+  "author": "Praveen Kumar",
   "license": "GPL-3.0",
   "private": true,
   "type": "module",
@@ -24,7 +24,7 @@
   },
   "build": {
     "appId": "app.echomusic.web",
-    "productName": "Echo Music",
+    "productName": "Resona",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -69,8 +69,8 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Echo Music",
-      "artifactName": "Echo-Music-Setup-${version}.exe"
+      "shortcutName": "Resona",
+      "artifactName": "Resona-Setup-${version}.exe"
     },
     "mac": {
       "target": [
@@ -95,15 +95,15 @@
         }
       ],
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Echo Music uses the microphone for voice search.",
-        "NSLocalNetworkUsageDescription": "Echo Music looks for Chromecast, Google TV and Nest devices on your network so you can cast music to them.",
+        "NSMicrophoneUsageDescription": "Resona uses the microphone for voice search.",
+        "NSLocalNetworkUsageDescription": "Resona looks for Chromecast, Google TV and Nest devices on your network so you can cast music to them.",
         "NSBonjourServices": [
           "_googlecast._tcp"
         ]
       }
     },
     "dmg": {
-      "artifactName": "Echo-Music-${version}-${arch}.dmg"
+      "artifactName": "Resona-${version}-${arch}.dmg"
     },
     "publish": [
       {
