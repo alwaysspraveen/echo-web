@@ -29,7 +29,7 @@ final class NodeRunner {
                 copyAssetsIfNew(ctx, root);
                 String script = new File(root, "nodejs-project/main.mjs").getAbsolutePath();
                 String web = new File(root, "web").getAbsolutePath();
-                startNode(new String[] { "node", script, web, String.valueOf(PORT) });
+                startNode(new String[] { "node", script, web, String.valueOf(PORT), java.util.TimeZone.getDefault().getID() });
             } catch (Exception e) {
                 Log.e("EchoNode", "Node failed", e);
             }

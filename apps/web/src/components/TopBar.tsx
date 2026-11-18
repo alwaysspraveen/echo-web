@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Mic, Play, Search, X } from 'lucide-react';
 import { cancelVoice, listen, stopVoice, useVoice } from '@/voice/voiceSearch';
-import { isTv } from '@/lib/tv';
+import { isTv, tvBridge } from '@/lib/tv';
 import type { Card } from '@echo/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,6 +61,11 @@ export function TopBar() {
     navigate(`/search?q=${encodeURIComponent(t)}`);
   };
 
+  // Android TV: the remote's mic / search button and the mic button use the TV's voice input.
+  useEffect(() => {
+    if (!isTv) return;
+    (window as unknown as { echoTvVoice?: (t: string) => void }).echoTvVoice = (t) => search(t);
+  });
   const voice = useVoice();
   const voiceBusy = voice.phase !== 'idle' && voice.phase !== 'error';
   const startVoice = async () => {
@@ -118,9 +123,9 @@ export function TopBar() {
               <X className="size-4" />
             </button>
           )}
-          {!isTv && <button
+          {<button
             type="button"
-            onClick={startVoice}
+            onClick={isTv ? () => tvBridge!.voiceSearch() : startVoice}
             aria-label={voice.phase === 'listening' ? 'Stop listening' : 'Search with your voice'}
             title={voice.phase === 'listening' ? 'Stop listening' : 'Search with your voice'}
             aria-pressed={voiceBusy}

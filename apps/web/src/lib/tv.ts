@@ -4,7 +4,7 @@
 import { audio } from '@/player/audio';
 import { usePlayer, useUi } from '@/player/store';
 
-interface EchoTv { exit(): void }
+interface EchoTv { exit(): void; voiceSearch(): void }
 export const tvBridge: EchoTv | undefined = typeof window !== 'undefined' ? (window as unknown as { echoTv?: EchoTv }).echoTv : undefined;
 export const isTv = !!tvBridge;
 
@@ -83,8 +83,10 @@ export function tvBack() {
 export function initTv() {
   if (!isTv) return;
   document.documentElement.classList.add('tv');
-  // 10-foot layout: lay the desktop UI out at 1280 px wide, scaled up to the TV.
+  // Same proportions as the Mac app: lay the desktop UI out 1280 px wide, scaled up to the TV.
   document.querySelector('meta[name=viewport]')?.setAttribute('content', 'width=1280, user-scalable=no');
+  // Start with the Queue/Lyrics panel closed so the main content gets the screen.
+  useUi.getState().setPanel(null);
   (window as unknown as { echoTvBack: () => void }).echoTvBack = tvBack;
 
   window.addEventListener('keydown', (e) => {

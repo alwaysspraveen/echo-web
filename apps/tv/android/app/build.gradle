@@ -6,6 +6,7 @@ if (signing.exists()) signing.withInputStream { props.load(it) }
 
 android {
     namespace 'com.praveen.echomusic.tv'
+    buildFeatures { buildConfig true }
     compileSdk 34
     ndkVersion '27.2.12479018'
 
