@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { AudioLines, AudioWaveform, Compass, HardDriveDownload, Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
+import { AudioWaveform, Compass, HardDriveDownload, Heart, History, Home, Library, ListMusic, Plus, Search, Settings } from 'lucide-react';
 import { useSettings } from '@/lib/settings';
 import { useLt } from '@/lib/listenTogether';
 import { openListenTogether } from './ListenTogether';
@@ -7,8 +7,6 @@ import { usePlaylists } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import logo from '@/logo.png';
 import { openNewPlaylist } from './NewPlaylistDialog';
-import { isTv } from '@/lib/tv';
-import { useCurrentTrack, useUi } from '@/player/store';
 
 const link = ({ isActive }: { isActive: boolean }) =>
   cn('flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-text-muted hover:bg-accent hover:text-text', isActive && 'bg-accent text-text');
@@ -22,7 +20,6 @@ export function Sidebar() {
         <img src={logo} alt="" className="size-8" />
         <span className="font-display text-xl font-extrabold tracking-tight">Echo</span>
       </div>
-      {isTv && <NowPlayingLink />}
       <NavLink to="/" end className={link}><Home className="size-5" />Home</NavLink>
       <NavLink to="/search" className={link}><Search className="size-5" />Search</NavLink>
       <NavLink to="/explore" className={link}><Compass className="size-5" />Explore</NavLink>
@@ -56,13 +53,3 @@ export function Sidebar() {
   );
 }
 
-/** Android TV (no player bar): back to the full-screen player. */
-function NowPlayingLink() {
-  const track = useCurrentTrack();
-  if (!track) return null;
-  return (
-    <button onClick={() => useUi.getState().setNowPlaying(true)} className={cn(link({ isActive: false }), 'text-text')}>
-      <AudioLines className="size-5 shrink-0 text-seed-soft" /><span className="min-w-0 truncate">Now playing</span>
-    </button>
-  );
-}

@@ -5,7 +5,6 @@ import { Toaster } from '@/components/ui/sonner';
 import { Sidebar } from '@/components/Sidebar';
 import { TopBar } from '@/components/TopBar';
 import { PlayerBar } from '@/components/PlayerBar';
-import { isTv } from '@/lib/tv';
 import { SidePanel } from '@/components/SidePanel';
 import { NowPlaying } from '@/components/NowPlaying';
 import { NewPlaylistDialog } from '@/components/NewPlaylistDialog';
@@ -58,7 +57,7 @@ export default function App() {
           </main>
           <SidePanel />
         </div>
-        {!isTv && <PlayerBar />}
+        <PlayerBar />
       </div>
       <NowPlaying />
       <NewPlaylistDialog />
