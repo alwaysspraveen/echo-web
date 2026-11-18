@@ -207,7 +207,7 @@ export function PlayerEngine() {
     const onTime = () => {
       const { crossfade, crossfadeSeconds } = useSettings.getState();
       const st = usePlayer.getState();
-      if (!crossfade || triggered || !st.playing || !Number.isFinite(audio.duration) || audio.duration < crossfadeSeconds * 2) return;
+      if (!crossfade || triggered || !st.playing || useLt.getState().session || !Number.isFinite(audio.duration) || audio.duration < crossfadeSeconds * 2) return;
       if (audio.duration - audio.currentTime > crossfadeSeconds) return;
       const hasNext = st.repeat !== 'one' && (st.index + 1 < st.queue.length || st.repeat === 'all');
       if (!hasNext) return;
@@ -295,6 +295,7 @@ export function PlayerEngine() {
   useEffect(() => {
     const st = usePlayer.getState;
     const onEnded = () => {
+      if (useLt.getState().session) return; // in a Vibe the server moves everyone to the next song
       const before = st().index;
       const advanced = st().next(true);
       if (advanced && st().index === before) { audio.currentTime = 0; audio.play().catch(() => {}); } // repeat one
@@ -302,13 +303,34 @@ export function PlayerEngine() {
     const onPlay = () => { switching.current = false; errorStreak.current = 0; if (!st().playing) st().setPlaying(true); };
     const onLoaded = () => { switching.current = false; };
     const onPause = () => { if (!switching.current && st().playing && !audio.ended) st().setPlaying(false); };
+    // Stuck-song watchdog: the song should be playing but its time hasn't moved.
+    //  - FLAC / 320 kbps stream: after 8 s, fall back (onError).
+    //  - YouTube stream: after 6 s, reload it at the same spot (up to twice), then skip.
     let lastProgress = { t: -1, at: Date.now() };
+    let retries = 0;
+    let retryFor: string | null = null;
     const watchdog = window.setInterval(() => {
-      if (!onExtension.current || !st().playing || audio.paused === false && audio.currentTime !== lastProgress.t) {
+      const moving = audio.paused === false && audio.currentTime !== lastProgress.t;
+      if (!st().playing || moving || !audio.getAttribute('src')) {
+        if (moving && audio.currentTime > lastProgress.t + 0.5) retries = 0;
         lastProgress = { t: audio.currentTime, at: Date.now() };
         return;
       }
-      if (Date.now() - lastProgress.at > 8000) { lastProgress = { t: -1, at: Date.now() }; onError(); }
+      const stuckFor = Date.now() - lastProgress.at;
+      if (onExtension.current) {
+        if (stuckFor > 8000) { lastProgress = { t: -1, at: Date.now() }; onError(); }
+        return;
+      }
+      const cur = st().queue[st().index];
+      if (!cur || stuckFor < 6000 || offlineUrl.current) return;
+      if (retryFor !== cur.id) { retryFor = cur.id; retries = 0; }
+      lastProgress = { t: -1, at: Date.now() };
+      if (retries >= 2) { retries = 0; onError(); return; }
+      retries++;
+      const at = audio.currentTime;
+      switching.current = true;
+      audio.src = `${streamUrl(cur.id, loadedQuality.current ?? useSettings.getState().quality)}&retry=${Date.now()}`;
+      audio.addEventListener('loadedmetadata', () => { markInternalSeek(); audio.currentTime = at; audio.play().catch(() => {}); }, { once: true });
     }, 1000);
     const onError = () => {
       switching.current = false;

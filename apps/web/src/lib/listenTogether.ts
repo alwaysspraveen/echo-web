@@ -1,104 +1,39 @@
-// Vibe: listen with friends in sync. Protobuf messages in an Envelope over a WebSocket, to Resona's
-// own Vibe server (Cloudflare). Wire format: protobuf (listentogether.proto).
-import protobuf from 'protobufjs';
+// Vibe: listen with friends in sync, on Resona's Vibe server.
+//
+// The server owns each room's timeline (song, playing/paused, and where in the song the room is at
+// any moment, on the server's clock). Every device, the host's included, follows that timeline
+// (see components/ListenTogetherController.tsx). The host's controls are requests to the server.
+// JSON messages over a WebSocket, sent as binary (UTF-8) frames.
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { toast } from 'sonner';
 import type { Track } from '@resona/shared';
-import protoSource from './listentogether.proto?raw';
 
 /** Resona's Vibe server (resona-vibe on Cloudflare). */
-export const VIBE_SERVER = 'wss://resona-vibe.praveenkumar75566.workers.dev/ws';
-
-// ---------- clock sync ----------
-// Positions in a Vibe are stamped with the server's clock. Each device measures how far its own
-// clock is from the server's (NTP-style: several round trips, keep the fastest one), so "where the
-// host is right now" is computed on the same clock everywhere.
-let clockOffset = 0; // server time − local time, ms
-let clockSyncedAt = 0;
-export const serverNow = () => Date.now() + clockOffset;
-export async function syncClock() {
-  if (Date.now() - clockSyncedAt < 60_000) return;
-  const url = VIBE_SERVER.replace(/^wss:/, 'https:').replace(/\/ws$/, '/time');
-  let best: { rtt: number; offset: number } | null = null;
-  for (let i = 0; i < 6; i++) {
-    try {
-      const t0 = Date.now();
-      const { now } = (await (await fetch(url, { cache: 'no-store' })).json()) as { now: number };
-      const t1 = Date.now();
-      const sample = { rtt: t1 - t0, offset: now + (t1 - t0) / 2 - t1 };
-      if (!best || sample.rtt < best.rtt) best = sample;
-    } catch { /* try the next sample */ }
-  }
-  if (best) { clockOffset = best.offset; clockSyncedAt = Date.now(); }
-}
-
-// ---------- wire format ----------
-
-const root = protobuf.parse(protoSource, { keepCase: false }).root;
-const T = (name: string) => root.lookupType(`echo.music.iad1tya.listentogether.proto.${name}`);
-const Envelope = T('Envelope');
-
-const PAYLOADS: Record<string, string> = {
-  create_room: 'CreateRoomPayload', join_room: 'JoinRoomPayload', approve_join: 'ApproveJoinPayload', reject_join: 'RejectJoinPayload',
-  playback_action: 'PlaybackActionPayload', buffer_ready: 'BufferReadyPayload', reconnect: 'ReconnectPayload',
-  update_room_settings: 'UpdateRoomSettingsPayload', kick_user: 'KickUserPayload',
-  room_created: 'RoomCreatedPayload', join_request: 'JoinRequestPayload', join_approved: 'JoinApprovedPayload',
-  join_rejected: 'JoinRejectedPayload', user_joined: 'UserJoinedPayload', user_left: 'UserLeftPayload',
-  sync_playback: 'PlaybackActionPayload', buffer_wait: 'BufferWaitPayload', buffer_complete: 'BufferCompletePayload',
-  suggest_track: 'SuggestTrackPayload', approve_suggestion: 'ApproveSuggestionPayload', reject_suggestion: 'RejectSuggestionPayload',
-  suggestion_received: 'SuggestionReceivedPayload', suggestion_approved: 'SuggestionApprovedPayload', suggestion_rejected: 'SuggestionRejectedPayload',
-  error: 'ErrorPayload', host_changed: 'HostChangedPayload', kicked: 'KickedPayload', sync_state: 'SyncStatePayload',
-  reconnected: 'ReconnectedPayload', user_reconnected: 'UserReconnectedPayload', user_disconnected: 'UserDisconnectedPayload',
-  room_settings_changed: 'UpdateRoomSettingsPayload',
-};
-
-async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([new Uint8Array(bytes)]).stream().pipeThrough(new DecompressionStream('gzip'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-function encode(type: string, payload?: Record<string, unknown>): Uint8Array {
-  const name = PAYLOADS[type];
-  const body = name && payload ? T(name).encode(T(name).fromObject(payload)).finish() : new Uint8Array();
-  return Envelope.encode(Envelope.fromObject({ type, payload: body, compressed: false })).finish();
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Any = any;
-async function decode(data: ArrayBuffer): Promise<{ type: string; payload: Any }> {
-  const env = Envelope.toObject(Envelope.decode(new Uint8Array(data)), { bytes: Uint8Array }) as { type: string; payload?: Uint8Array; compressed?: boolean };
-  const raw = env.payload ?? new Uint8Array();
-  const body = env.compressed ? await gunzip(raw) : raw;
-  const name = PAYLOADS[env.type];
-  const payload = name && body.length ? T(name).toObject(T(name).decode(body), { longs: Number, defaults: true, arrays: true }) : {};
-  return { type: env.type, payload };
-}
+export const VIBE_SERVER = 'wss://resona-vibe.praveenkumar75566.workers.dev/vibe';
 
 // ---------- tracks ----------
 
-export interface LtTrack { id: string; title: string; artist: string; album?: string; duration: number; thumbnail?: string }
-
-export const toLt = (t: Track): LtTrack => ({
+export interface VibeTrack { id: string; title: string; artist: string; album?: string; duration: number; thumbnail?: string }
+export const toVibe = (t: Track): VibeTrack => ({
   id: t.id, title: t.title, artist: t.artists.map((a) => a.name).join(', '), album: t.album?.name,
-  duration: t.duration ? Math.round(t.duration * 1000) : 180000, thumbnail: t.thumbnail ?? '',
+  duration: t.duration ? Math.round(t.duration * 1000) : 0, thumbnail: t.thumbnail,
 });
-export const fromLt = (t: LtTrack): Track => ({
+export const fromVibe = (t: VibeTrack): Track => ({
   id: t.id, title: t.title,
   artists: (t.artist || '').split(/,\s*/).filter(Boolean).map((name) => ({ name })),
   album: t.album ? { name: t.album } : undefined,
   duration: t.duration ? t.duration / 1000 : undefined,
-  thumbnail: t.thumbnail || undefined,
+  thumbnail: t.thumbnail,
 });
 
 // ---------- state ----------
 
+/** The room's timeline, as decided by the server. `pos` ms into the song at server time `at`. */
+export interface Timeline { seq: number; queue: VibeTrack[]; index: number; status: 'idle' | 'loading' | 'playing' | 'paused'; pos: number; at: number }
 export interface LtUser { userId: string; username: string; isHost: boolean; isConnected: boolean }
 export interface JoinRequest { userId: string; username: string }
-export interface Suggestion { id: string; from: string; track: LtTrack }
-export interface PlaybackAction { action: string; trackId?: string; position?: number; trackInfo?: LtTrack; insertNext?: boolean; queue?: LtTrack[]; queueTitle?: string; serverTime?: number }
-export interface RoomSnapshot { currentTrack?: LtTrack; isPlaying: boolean; position: number; lastUpdate: number; queue: LtTrack[] }
-
+export interface Suggestion { id: string; from: string; track: VibeTrack }
 interface Session { roomCode: string; userId: string; token: string; username: string }
 
 interface LtState {
@@ -109,6 +44,7 @@ interface LtState {
   requests: JoinRequest[];
   suggestions: Suggestion[];
   allowControl: boolean;
+  timeline: Timeline | null;
   name: string;
   dialogOpen: boolean;
   setDialogOpen: (o: boolean) => void;
@@ -117,22 +53,37 @@ interface LtState {
 export const useLt = create<LtState>()(
   persist(
     (set) => ({
-      session: null, status: 'idle', hostId: null, users: [], requests: [], suggestions: [], allowControl: false,
+      session: null, status: 'idle', hostId: null, users: [], requests: [], suggestions: [], allowControl: false, timeline: null,
       name: '', dialogOpen: false,
       setDialogOpen: (dialogOpen) => set({ dialogOpen }),
     }),
-    { name: 'echo-listen-together', partialize: ({ session, name, hostId }) => ({ session, name, hostId }) },
+    // Saved: the session (to rejoin after a restart), your name, and who the host is.
+    { name: 'echo-vibe', partialize: ({ session, name, hostId }) => ({ session, name, hostId }) },
   ),
 );
 
-export const ltIsHost = () => { const s = useLt.getState(); return !!s.session && s.hostId === s.session.userId; };
-/** Only the host controls playback; guests suggest songs. */
-export const ltCanControl = () => ltIsHost();
+// Development builds only: inspect the room from the browser console.
+if (import.meta.env.DEV && typeof window !== 'undefined') (window as unknown as { __vibe: typeof useLt }).__vibe = useLt;
 
-// Playback events go to the controller (ListenTogetherController.tsx), which drives the player.
-type Listener = { onDenied: () => void; onAddSuggested: (t: LtTrack) => void; onAction: (a: PlaybackAction) => void; onSnapshot: (s: RoomSnapshot, reason: 'joined' | 'sync') => void; onBufferComplete: (trackId: string) => void; onUserJoined: () => void };
-let listener: Listener | null = null;
-export const setLtListener = (l: Listener | null) => { listener = l; };
+export const ltIsHost = () => { const s = useLt.getState(); return !!s.session && s.hostId === s.session.userId; };
+/** The host controls playback (or everyone, if the host allows it). */
+export const ltCanControl = () => ltIsHost() || (!!useLt.getState().session && useLt.getState().allowControl);
+
+// ---------- clock (server time) ----------
+// Measured over the room connection itself, NTP-style: keep the round trip with the smallest delay.
+let clockOffset = 0; // server − local, ms
+let bestRtt = Infinity;
+let rttMeasuredAt = 0;
+export const serverNow = () => Date.now() + clockOffset;
+function onPong(c: number, s: number) {
+  const now = Date.now();
+  const rtt = now - c;
+  // A fresh sample wins if it's as good as the best, or the best is getting old.
+  if (rtt <= bestRtt + 5 || now - rttMeasuredAt > 60_000) {
+    bestRtt = rtt; rttMeasuredAt = now;
+    clockOffset = s + rtt / 2 - now;
+  }
+}
 
 // ---------- connection ----------
 
@@ -140,110 +91,66 @@ let ws: WebSocket | null = null;
 let pingTimer: number | undefined;
 let retryTimer: number | undefined;
 let retries = 0;
-let wanted: { kind: 'create' | 'join' | 'reconnect'; code?: string } | null = null;
-let pending: { resolve: (v: string) => void; reject: (e: Error) => void } | null = null;
+let wanted: { kind: 'create' | 'join' | 'resume'; code?: string } | null = null;
+let pending: { resolve: (code: string) => void; reject: (e: Error) => void } | null = null;
+const enc = new TextEncoder();
+const dec = new TextDecoder();
 
-function send(type: string, payload?: Record<string, unknown>) {
-  if (ws?.readyState === WebSocket.OPEN) ws.send(encode(type, payload));
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Msg = Record<string, any>;
+function send(m: Msg) { if (ws?.readyState === WebSocket.OPEN) ws.send(enc.encode(JSON.stringify(m))); }
 
-const userFrom = (u: Any): LtUser => ({ userId: u.userId, username: u.username, isHost: !!u.isHost, isConnected: u.isConnected !== false });
-
-function applyRoomState(state: Any, reason: 'joined' | 'sync') {
-  useLt.setState({ hostId: state.hostId || useLt.getState().hostId, users: (state.users ?? []).map(userFrom), allowControl: !!state.allowParticipantControl });
-  listener?.onSnapshot({ currentTrack: state.currentTrack?.id ? state.currentTrack : undefined, isPlaying: !!state.isPlaying, position: Number(state.position) || 0, lastUpdate: Number(state.lastUpdate) || Date.now(), queue: state.queue ?? [] }, reason);
-}
-
-async function onMessage(ev: MessageEvent) {
-  const { type, payload: p } = await decode(ev.data as ArrayBuffer);
+function onMessage(ev: MessageEvent) {
+  const m: Msg = JSON.parse(typeof ev.data === 'string' ? ev.data : dec.decode(ev.data as ArrayBuffer));
   const st = useLt.getState();
-  switch (type) {
-    case 'room_created': {
-      const session = { roomCode: p.roomCode, userId: p.userId, token: p.sessionToken, username: st.name || 'Host' };
-      useLt.setState({ session, status: 'live', hostId: p.userId, users: [{ userId: p.userId, username: session.username, isHost: true, isConnected: true }], requests: [] });
-      pending?.resolve(p.roomCode); pending = null;
-      listener?.onUserJoined(); // send our current song so the room has it
-      break;
-    }
-    case 'join_approved': {
-      const session = { roomCode: p.roomCode, userId: p.userId, token: p.sessionToken, username: st.name || 'Guest' };
+  switch (m.t) {
+    case 'pong': onPong(m.c, m.s); break;
+    case 'joined': {
+      const session = { roomCode: m.code, userId: m.userId, token: m.token, username: st.name || (wanted?.kind === 'create' ? 'Host' : 'Guest') };
       useLt.setState({ session, status: 'live', requests: [] });
-      if (p.state) applyRoomState(p.state, 'joined');
-      pending?.resolve(p.roomCode); pending = null;
+      wanted = { kind: 'resume' };
+      pending?.resolve(m.code); pending = null;
       break;
     }
-    case 'join_rejected':
-      pending?.reject(new Error(p.reason ? `The host declined: ${p.reason}` : 'The host declined your request')); pending = null;
+    case 'members':
+      useLt.setState({
+        hostId: m.hostId, allowControl: !!m.allowControl,
+        users: m.members.map((u: Msg) => ({ userId: u.userId, username: u.name, isHost: u.userId === m.hostId, isConnected: !!u.connected })),
+      });
+      break;
+    case 'state': {
+      // The server sends its clock with each state: a quick first estimate until pings refine it.
+      if (bestRtt === Infinity && typeof m.now === 'number') clockOffset = m.now - Date.now();
+      useLt.setState({ timeline: { seq: m.seq, queue: m.queue ?? [], index: m.index ?? 0, status: m.status, pos: m.pos ?? 0, at: m.at ?? 0 } });
+      break;
+    }
+    case 'request':
+      if (ltIsHost()) {
+        useLt.setState({ requests: [...st.requests.filter((r) => r.userId !== m.userId), { userId: m.userId, username: m.name }] });
+        toast(`${m.name} wants to join your Vibe`, { id: `vibe-req-${m.userId}` });
+      }
+      break;
+    case 'suggestion':
+      if (ltIsHost()) {
+        useLt.setState({ suggestions: [...st.suggestions, { id: m.id, from: m.from, track: m.track }] });
+        toast(`${m.from} suggested "${m.track.title}"`, { id: `vibe-sug-${m.id}` });
+      }
+      break;
+    case 'suggestionResult':
+      toast(m.accepted ? `The host added "${m.track.title}"` : "The host didn't add your suggestion");
+      break;
+    case 'declined':
+      pending?.reject(new Error('The host declined your request')); pending = null;
       hangUp();
       break;
-    case 'reconnected':
-      useLt.setState({ status: 'live', hostId: p.isHost ? p.userId : useLt.getState().hostId });
-      if (p.state) applyRoomState(p.state, 'sync');
-      break;
-    case 'join_request':
-      if (ltIsHost()) {
-        useLt.setState({ requests: [...st.requests.filter((r) => r.userId !== p.userId), { userId: p.userId, username: p.username }] });
-        toast(`${p.username} wants to join your Vibe`, { id: `lt-req-${p.userId}` });
-      }
-      break;
-    case 'user_joined':
-      useLt.setState({ users: [...st.users.filter((u) => u.userId !== p.userId), { userId: p.userId, username: p.username, isHost: false, isConnected: true }] });
-      toast(`${p.username} joined`);
-      if (ltIsHost()) listener?.onUserJoined();
-      break;
-    case 'user_left':
-      useLt.setState({ users: st.users.filter((u) => u.userId !== p.userId) });
-      if (p.username) toast(`${p.username} left`);
-      break;
-    case 'user_disconnected':
-    case 'user_reconnected':
-      useLt.setState({ users: st.users.map((u) => (u.userId === p.userId ? { ...u, isConnected: type === 'user_reconnected' } : u)) });
-      break;
-    case 'host_changed':
-      useLt.setState({ hostId: p.newHostId || null });
-      if (p.newHostName) toast(`${p.newHostName} is now the host`);
-      break;
-    case 'room_settings_changed':
-      useLt.setState({ allowControl: !!p.allowParticipantControl });
-      break;
-    case 'sync_playback':
-      listener?.onAction(p as PlaybackAction);
-      break;
-    case 'sync_state':
-      listener?.onSnapshot({ currentTrack: p.currentTrack?.id ? p.currentTrack : undefined, isPlaying: !!p.isPlaying, position: Number(p.position) || 0, lastUpdate: Number(p.lastUpdate) || Date.now(), queue: p.queue ?? [] }, 'sync');
-      break;
-    case 'suggestion_received':
-      if (ltIsHost() && p.trackInfo?.id) {
-        useLt.setState({ suggestions: [...st.suggestions, { id: p.suggestionId, from: p.fromUsername, track: p.trackInfo }] });
-        toast(`${p.fromUsername} suggested "${p.trackInfo.title}"`, { id: `lt-sug-${p.suggestionId}` });
-      }
-      break;
-    case 'suggestion_approved':
-      if (p.trackInfo?.title) toast(`The host added "${p.trackInfo.title}"`);
-      break;
-    case 'suggestion_rejected':
-      toast("The host didn't add your suggestion");
-      break;
-    case 'buffer_complete':
-      listener?.onBufferComplete(p.trackId);
-      break;
     case 'kicked':
-      endLocally(`You were removed from the room${p.reason ? `: ${p.reason}` : ''}`);
+      endLocally('You were removed from the Vibe');
       break;
-    case 'error': {
-      const msg = p.message || p.code || 'Vibe error';
-      if (p.code === 'not_host') {
-        // The server refused our playback change: we don't have control. Follow the room again.
-        useLt.setState({ allowControl: false });
-        listener?.onDenied();
-        toast(msg, { id: 'lt-not-host' });
-        break;
-      }
-      if (pending) { pending.reject(new Error(/not.?found|invalid.?room/i.test(msg) ? 'No room with that code' : msg)); pending = null; hangUp(); }
-      else if (/session|token|room.*(not|closed)/i.test(msg) && wanted?.kind === 'reconnect') endLocally('The Vibe has ended');
-      else toast.error(msg);
+    case 'error':
+      if (pending) { pending.reject(new Error(m.message || 'Something went wrong')); pending = null; hangUp(); }
+      else if (m.code === 'session_ended') endLocally('The Vibe has ended');
+      else toast.error(m.message || 'Vibe error', { id: `vibe-err-${m.code}` });
       break;
-    }
   }
 }
 
@@ -256,72 +163,82 @@ function connect() {
   sock.onopen = () => {
     retries = 0;
     const st = useLt.getState();
-    if (wanted?.kind === 'create') send('create_room', { username: st.name || 'Host' });
-    else if (wanted?.kind === 'join') send('join_room', { roomCode: wanted.code, username: st.name || 'Guest' });
-    else if (wanted?.kind === 'reconnect' && st.session) send('reconnect', { sessionToken: st.session.token });
+    if (wanted?.kind === 'create') send({ t: 'create', name: st.name || 'Host' });
+    else if (wanted?.kind === 'join') send({ t: 'join', code: wanted.code, name: st.name || 'Guest' });
+    else if (wanted?.kind === 'resume' && st.session) send({ t: 'resume', token: st.session.token });
+    // Clock sync: a burst of pings now, then one every 15 s.
+    bestRtt = Infinity;
+    for (let i = 0; i < 6; i++) setTimeout(() => send({ t: 'ping', c: Date.now() }), i * 120);
     clearInterval(pingTimer);
-    pingTimer = window.setInterval(() => send('ping'), 25_000);
+    pingTimer = window.setInterval(() => send({ t: 'ping', c: Date.now() }), 15_000);
   };
-  sock.onmessage = (ev) => { onMessage(ev).catch(() => {}); };
+  sock.onmessage = onMessage;
   sock.onclose = () => {
-    if (ws !== sock) return; // replaced
+    if (ws !== sock) return;
+    ws = null;
     clearInterval(pingTimer);
     if (pending) { pending.reject(new Error("Can't reach the Vibe server. Check your internet connection.")); pending = null; wanted = null; useLt.setState({ status: 'idle' }); return; }
-    if (!useLt.getState().session) return;
-    // Lost connection mid-session: reconnect with our session token (backs off up to ~15 s).
-    useLt.setState({ status: 'reconnecting' });
-    wanted = { kind: 'reconnect' };
-    retryTimer = window.setTimeout(connect, Math.min(15_000, 1000 * 2 ** retries++));
+    if (useLt.getState().session) {
+      useLt.setState({ status: 'reconnecting' });
+      retryTimer = window.setTimeout(connect, Math.min(15_000, 1000 * 2 ** retries++));
+    }
   };
 }
 
 function hangUp() {
   wanted = null;
-  clearInterval(pingTimer);
-  clearTimeout(retryTimer);
+  clearInterval(pingTimer); clearTimeout(retryTimer);
   const s = ws; ws = null; s?.close();
 }
 
 function endLocally(message?: string) {
   hangUp();
-  useLt.setState({ session: null, status: 'idle', hostId: null, users: [], requests: [], suggestions: [] });
+  useLt.setState({ session: null, status: 'idle', hostId: null, users: [], requests: [], suggestions: [], timeline: null });
   if (message) toast(message);
 }
 
-const begin = (kind: 'create' | 'join', code?: string) =>
-  new Promise<string>((resolve, reject) => {
+function begin(kind: 'create' | 'join', code?: string): Promise<string> {
+  hangUp();
+  useLt.setState({ status: kind === 'join' ? 'waiting' : 'connecting', session: null, timeline: null });
+  wanted = { kind, code };
+  return new Promise((resolve, reject) => {
     pending = { resolve, reject };
-    wanted = { kind, code };
-    useLt.setState({ status: kind === 'join' ? 'waiting' : 'connecting', session: null, users: [], requests: [] });
     connect();
-    window.setTimeout(() => {
-      if (pending) { pending.reject(new Error(kind === 'join' ? 'The host didn’t respond. Ask them to approve your request, then try again.' : 'The Vibe server didn’t respond')); pending = null; hangUp(); useLt.setState({ status: 'idle' }); }
+    setTimeout(() => {
+      if (!pending) return;
+      pending.reject(new Error(kind === 'join' ? "The host didn't respond. Ask them to let you in, then try again." : "The Vibe server didn't respond"));
+      pending = null; hangUp(); useLt.setState({ status: 'idle' });
     }, kind === 'join' ? 90_000 : 15_000);
   });
+}
 
-// ---------- public API ----------
+// ---------- room ----------
 
 export function startRoom(name: string) { useLt.setState({ name }); return begin('create'); }
 export function joinRoom(code: string, name: string) { useLt.setState({ name }); return begin('join', code.trim().toUpperCase()); }
-export function resumeRoom() { if (useLt.getState().session && !ws) { wanted = { kind: 'reconnect' }; useLt.setState({ status: 'connecting' }); connect(); } }
+/** Reconnects to the saved Vibe after a restart. */
+export function resumeRoom() { if (useLt.getState().session && !ws) { wanted = { kind: 'resume' }; useLt.setState({ status: 'connecting' }); connect(); } }
 export function leaveRoom() {
   const host = ltIsHost();
-  send('leave_room');
+  send({ t: 'leave' });
   endLocally(host ? 'Vibe ended' : 'You left the Vibe');
 }
-export function approve(userId: string) { send('approve_join', { userId }); useLt.setState({ requests: useLt.getState().requests.filter((r) => r.userId !== userId) }); }
-export function decline(userId: string) { send('reject_join', { userId, reason: 'Declined by host' }); useLt.setState({ requests: useLt.getState().requests.filter((r) => r.userId !== userId) }); }
-export function suggest(track: LtTrack) { send('suggest_track', { trackInfo: track }); }
-export function acceptSuggestion(s: Suggestion) {
-  send('approve_suggestion', { suggestionId: s.id });
-  listener?.onAddSuggested(s.track);
-  useLt.setState({ suggestions: useLt.getState().suggestions.filter((x) => x.id !== s.id) });
-}
-export function declineSuggestion(s: Suggestion) {
-  send('reject_suggestion', { suggestionId: s.id, reason: 'Declined by host' });
-  useLt.setState({ suggestions: useLt.getState().suggestions.filter((x) => x.id !== s.id) });
-}
-export function sendAction(a: PlaybackAction) { send('playback_action', a as unknown as Record<string, unknown>); }
-export function sendBufferReady(trackId: string) { send('buffer_ready', { trackId }); }
-export function requestSync() { send('request_sync'); }
+export function approve(userId: string) { send({ t: 'approve', userId }); useLt.setState({ requests: useLt.getState().requests.filter((r) => r.userId !== userId) }); }
+export function decline(userId: string) { send({ t: 'decline', userId }); useLt.setState({ requests: useLt.getState().requests.filter((r) => r.userId !== userId) }); }
+export function suggest(track: VibeTrack) { send({ t: 'suggest', track }); }
+export function acceptSuggestion(s: Suggestion) { send({ t: 'acceptSuggestion', id: s.id }); useLt.setState({ suggestions: useLt.getState().suggestions.filter((x) => x.id !== s.id) }); }
+export function declineSuggestion(s: Suggestion) { send({ t: 'declineSuggestion', id: s.id }); useLt.setState({ suggestions: useLt.getState().suggestions.filter((x) => x.id !== s.id) }); }
 
+// ---------- playback requests (the server applies them and updates everyone's timeline) ----------
+
+export const vibe = {
+  load: (queue: Track[], index: number, pos = 0) => send({ t: 'load', queue: queue.map(toVibe), index, pos: Math.round(pos) }),
+  queue: (queue: Track[], index: number) => send({ t: 'queue', queue: queue.map(toVibe), index }),
+  play: () => send({ t: 'play' }),
+  pause: () => send({ t: 'pause' }),
+  seek: (ms: number) => send({ t: 'seek', pos: Math.round(ms) }),
+  next: () => send({ t: 'next' }),
+  prev: () => send({ t: 'prev' }),
+  ready: (seq: number) => send({ t: 'ready', seq }),
+  sync: () => send({ t: 'sync' }),
+};

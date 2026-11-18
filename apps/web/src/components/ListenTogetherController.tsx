@@ -1,31 +1,32 @@
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import type { Track } from '@resona/shared';
-import {
-  fromLt, ltCanControl, ltIsHost, requestSync, suggest, resumeRoom, sendAction, sendBufferReady, serverNow, setLtListener, syncClock, toLt,
-  useLt, type LtTrack, type PlaybackAction, type RoomSnapshot,
-} from '@/lib/listenTogether';
-import { audio, isInternalSeek, seek } from '@/player/audio';
+import { fromVibe, ltCanControl, ltIsHost, resumeRoom, serverNow, suggest, toVibe, useLt, vibe, type Timeline } from '@/lib/listenTogether';
+import { audio, isInternalSeek, markInternalSeek, seek } from '@/player/audio';
 import { usePlayer } from '@/player/store';
 
-const ids = (q: Track[]) => q.map((t) => t.id).join(',');
-const now = () => Date.now();
+// The Vibe follower. The server owns the room's timeline; this makes the local player follow it,
+// on every device (the host's too), and turns local clicks into requests to the server.
 
-// True while we copy the room into the local player, so those changes aren't sent back.
+const ids = (q: Track[]) => q.map((t) => t.id).join(',');
+const current = () => { const p = usePlayer.getState(); return p.index >= 0 ? p.queue[p.index] : undefined; };
+const timeline = () => useLt.getState().timeline;
+const inRoom = () => !!useLt.getState().session;
+
+// True while we change the player ourselves, so those changes aren't sent back as requests.
 let applying = false;
-// The server echoes every action to everyone, including the sender. Remember what we sent.
-let sent: { action: string; trackId?: string; position?: number; at: number }[] = [];
-let bufferFor: string | null = null;
-// Seeks we make to follow the room fire 'seeked' later; don't report those as user seeks.
-let ourSeekAt = 0;
-// The room's play state as we last heard it, to restore if the server refuses our change.
-let roomPlaying = false;
-// Where the host is: `base` ms into `trackId` at server time `at`. Guests steer toward this.
-let roomRef: { trackId?: string; base: number; at: number } | null = null;
-const setRef = (trackId: string | undefined, base: number, at: number | undefined) => { roomRef = { trackId: trackId ?? current()?.id, base, at: at || serverNow() }; };
-// How long this device takes from "playing" to the sound actually coming out of the speakers or
-// headphones (Bluetooth adds 100–300 ms). Positions sent to the room are what the host *hears*,
-// and guests aim for that plus their own delay, so everyone hears the same moment.
+function setPlayer(patch: Partial<ReturnType<typeof usePlayer.getState>>) {
+  applying = true;
+  try { usePlayer.setState(patch); } finally { applying = false; }
+}
+
+// ----- which song the audio element really holds -----
+// Set from the element itself: cleared whenever the player's song changes (from any source), and
+// set to the current song when its audio has loaded. So "ready" can't refer to the previous song.
+let loadedFor: string | null = null;
+const audioReadyFor = (id: string) => loadedFor === id && audio.readyState >= HTMLMediaElement.HAVE_METADATA;
+
+// How long from "play" until sound leaves the speakers / headphones (Bluetooth adds 100–300 ms).
 let latencyCtx: AudioContext | null = null;
 const outputDelay = () => {
   try {
@@ -34,267 +35,208 @@ const outputDelay = () => {
     return Number.isFinite(s) && s >= 0 && s < 0.6 ? s : 0;
   } catch { return 0; }
 };
-/** Our position as heard, in ms (what we report to the room). */
-const heardMs = () => Math.max(0, posMs() - Math.round(outputDelay() * 1000));
 // How long our seeks take to land (measured), so a correction aims a little ahead.
 let seekCost = 0.15;
-/** Where the host is right now, in seconds (on the shared server clock). */
-const hostPosition = () => (roomRef ? (roomRef.base + (roomPlaying ? Math.max(0, serverNow() - roomRef.at) : 0)) / 1000 : null);
-
-function send(a: PlaybackAction) {
-  sent = [...sent.filter((s) => now() - s.at < 4000), { action: a.action, trackId: a.trackId, position: a.position, at: now() }];
-  sendAction(a);
-}
-const isOwnMessage = (a: PlaybackAction) =>
-  sent.some((s) => s.action === a.action && now() - s.at < 4000 && (!s.trackId || s.trackId === a.trackId || !a.trackId) &&
-    (s.position == null || a.position == null || Math.abs(s.position - a.position) < 1500));
-
-const posMs = () => Math.round((audio.currentTime || 0) * 1000);
-const current = () => { const p = usePlayer.getState(); return p.index >= 0 ? p.queue[p.index] : undefined; };
-
-// True from when we switch the player to another song until that song's audio has loaded. Until
-// then the element still holds the previous song, so seeking it would be lost.
-let switchingTrack = false;
-/** Run once the *current* song can seek (waits for a song we just switched to). */
-const whenSeekable = (fn: () => void) => {
-  if (!switchingTrack && audio.readyState >= HTMLMediaElement.HAVE_METADATA) fn();
-  else audio.addEventListener('loadedmetadata', fn, { once: true });
-};
-
-/** Seek once the current song can seek. `target` may be a function evaluated at that moment. */
-function seekWhenReady(target: () => number) {
-  whenSeekable(() => { const t = target() + (ltIsHost() ? 0 : outputDelay()); if (Math.abs(audio.currentTime - t) > 0.3) { ourSeekAt = now(); seek(t + (ltIsHost() ? 0 : seekCost)); } });
+let ourSeekAt = 0;
+function jump(seconds: number) {
+  ourSeekAt = Date.now();
+  markInternalSeek();
+  const started = performance.now();
+  audio.addEventListener('seeked', () => { seekCost = Math.min(1, Math.max(0.03, 0.7 * seekCost + 0.3 * (performance.now() - started) / 1000)); }, { once: true });
+  seek(seconds);
 }
 
-/** Tell the server when the new song has loaded (the host waits for everyone before playing). */
-function reportBuffered(trackId: string) {
-  bufferFor = trackId;
-  const ready = () => { if (bufferFor === trackId && current()?.id === trackId) { sendBufferReady(trackId); bufferFor = null; } };
-  if (audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA && current()?.id === trackId) ready();
-  else audio.addEventListener('canplay', ready, { once: true });
+/** True when the room (or our audio) has reached the end of the song. */
+const atSongEnd = (tl: Timeline) => audio.ended || (Number.isFinite(audio.duration) && roomPosition(tl) >= audio.duration - 0.3);
+
+/** Where the room is right now, in seconds into the song. */
+function roomPosition(tl: Timeline) {
+  const now = serverNow();
+  return (tl.status === 'playing' && now > tl.at ? tl.pos + (now - tl.at) : tl.pos) / 1000;
 }
 
-/** Start playing at the room's position: jump there first (once the song can seek), then play,
- *  so the start of the song is never heard. */
-function playAt(target: () => number) {
-  const go = () => {
-    const t = target() + (ltIsHost() ? 0 : outputDelay());
-    if (Math.abs(audio.currentTime - t) > 0.3) { ourSeekAt = now(); seek(t + (ltIsHost() ? 0 : seekCost)); }
-    setPlayer({ playing: true });
-  };
-  if (!switchingTrack && audio.readyState >= HTMLMediaElement.HAVE_METADATA) go();
-  else { setPlayer({ playing: false }); whenSeekable(go); }
-}
+let readySentFor = -1;
+// After our own seek request, don't correct until the room's new position arrives.
+let holdUntil = 0;
+// When the player last switched songs (to spot a song that never loads).
+let songChangedAt = 0;
+let startTimer: number | undefined;
+let startTimerSeq = -1;
 
-function setPlayer(patch: Partial<ReturnType<typeof usePlayer.getState>>) {
-  applying = true;
-  try { usePlayer.setState(patch); } finally { applying = false; }
-}
+/** Make the player match the timeline. Safe to call any time. */
+function reconcile() {
+  const tl = timeline();
+  if (!tl || !inRoom()) return;
+  const want = tl.queue[tl.index];
+  const cur = current();
+  if (!want || !cur || cur.id !== want.id) return;
+  const ready = audioReadyFor(want.id);
 
-function loadQueue(track: LtTrack, queue: LtTrack[] | undefined, playing: boolean) {
-  let q = (queue?.length ? queue : [track]).map(fromLt);
-  let index = q.findIndex((t) => t.id === track.id);
-  if (index === -1) { q = [fromLt(track), ...q]; index = 0; }
-  const p = usePlayer.getState();
-  if (current()?.id !== track.id && !switchingTrack) {
-    // Registered first, so it clears before any seek waiting on the same event runs.
-    switchingTrack = true;
-    audio.addEventListener('loadedmetadata', () => { switchingTrack = false; }, { once: true });
-  }
-  if (ids(p.queue) === ids(q) && p.index === index) setPlayer({ playing });
-  else setPlayer({ queue: q, index, playing, unshuffled: null, shuffle: false, radioFor: null });
-  reportBuffered(track.id);
-}
-
-function applySnapshot(s: RoomSnapshot) {
-  if (!s.currentTrack) return;
-  roomPlaying = s.isPlaying;
-  setRef(s.currentTrack.id, s.position, s.lastUpdate);
-  loadQueue(s.currentTrack, s.queue, false);
-  if (s.isPlaying) playAt(() => hostPosition() ?? s.position / 1000);
-  else seekWhenReady(() => s.position / 1000);
-}
-
-function applyAction(a: PlaybackAction) {
-  if (isOwnMessage(a)) return;
-  const p = usePlayer.getState();
-  switch (a.action) {
-    case 'change_track':
-      // Load the song but wait: playback starts when the host's copy actually starts ('play').
-      roomPlaying = false;
-      roomRef = null;
-      if (a.trackInfo?.id) { loadQueue(a.trackInfo, a.queue, false); seekWhenReady(() => (a.position ?? 0) / 1000); }
-      break;
-    case 'play': {
-      roomPlaying = true;
-      setRef(a.trackId, a.position ?? posMs(), a.serverTime);
-      playAt(() => hostPosition() ?? 0);
-      break;
+  if (tl.status !== 'playing') {
+    clearTimeout(startTimer); startTimerSeq = -1;
+    if (usePlayer.getState().playing) setPlayer({ playing: false });
+    if (!audio.paused) audio.pause();
+    audio.playbackRate = 1;
+    if (ready && Math.abs(audio.currentTime - tl.pos / 1000) > 0.3) jump(tl.pos / 1000);
+    // Tell the server we can start this song.
+    if (tl.status === 'loading' && ready && readySentFor !== tl.seq && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      readySentFor = tl.seq;
+      vibe.ready(tl.seq);
     }
-    case 'pause':
-      roomPlaying = false;
-      roomRef = null;
-      audio.playbackRate = 1;
-      setPlayer({ playing: false });
-      if (a.position != null) seekWhenReady(() => a.position! / 1000);
-      break;
-    case 'seek': {
-      setRef(a.trackId, a.position ?? 0, a.serverTime);
-      seekWhenReady(() => hostPosition() ?? 0);
-      break;
-    }
-    case 'tick':
-      // Host heartbeat: its exact position. The drift loop below steers toward it.
-      if (a.trackId && current()?.id !== a.trackId) break;
-      setRef(a.trackId, a.position ?? 0, a.serverTime);
-      if (!roomPlaying) { roomPlaying = true; playAt(() => hostPosition() ?? 0); }
-      break;
-    case 'sync_queue':
-      if (a.queue?.length) {
-        const cur = current();
-        let q = a.queue.map(fromLt);
-        let index = cur ? q.findIndex((t) => t.id === cur.id) : 0;
-        if (cur && index === -1) { q = [cur, ...q]; index = 0; }
-        if (ids(q) !== ids(p.queue)) setPlayer({ queue: q, index: Math.max(0, index) });
-      }
-      break;
-    case 'queue_add':
-      if (a.trackInfo?.id && !p.queue.some((t) => t.id === a.trackInfo!.id)) {
-        const q = [...p.queue];
-        q.splice(a.insertNext ? p.index + 1 : q.length, 0, fromLt(a.trackInfo));
-        setPlayer({ queue: q });
-      }
-      break;
-    case 'queue_remove':
-      if (a.trackId) {
-        const i = p.queue.findIndex((t) => t.id === a.trackId);
-        if (i > -1 && i !== p.index) setPlayer({ queue: p.queue.filter((_, j) => j !== i), index: i < p.index ? p.index - 1 : p.index });
-      }
-      break;
-    case 'queue_clear':
-      if (p.index >= 0) setPlayer({ queue: [p.queue[p.index]], index: 0 });
-      break;
-    case 'skip_next': applying = true; p.next(); applying = false; break;
-    case 'skip_prev': applying = true; p.prev(0); applying = false; break;
+    return;
   }
+
+  // Playing.
+  if (!ready) { if (usePlayer.getState().playing) setPlayer({ playing: false }); return; } // starts once loaded (loadedmetadata → reconcile)
+  const untilStart = tl.at - serverNow(); // ms until the scheduled start
+  if (untilStart > 0) {
+    // Scheduled start: wait at the start position, then play so the sound comes out exactly on time.
+    if (!audio.paused) { setPlayer({ playing: false }); audio.pause(); }
+    if (Math.abs(audio.currentTime - tl.pos / 1000) > 0.05) jump(tl.pos / 1000);
+    if (startTimerSeq !== tl.seq) {
+      clearTimeout(startTimer);
+      startTimerSeq = tl.seq;
+      startTimer = window.setTimeout(() => {
+        if (timeline()?.seq !== tl.seq) return;
+        setPlayer({ playing: true });
+        audio.play().catch(() => {});
+      }, Math.max(0, untilStart - outputDelay() * 1000));
+    }
+    return;
+  }
+  // At the very end of the song: wait for the server to move the room on. (Pressing play on a
+  // finished song would restart it from 0:00.)
+  if (atSongEnd(tl)) return;
+  // Already running: be at the right spot and playing.
+  const target = roomPosition(tl) + outputDelay();
+  if (Math.abs(audio.currentTime - target) > 0.3) jump(target + (audio.paused ? 0 : seekCost));
+  if (!usePlayer.getState().playing) setPlayer({ playing: true });
+  if (audio.paused) audio.play().catch(() => {});
 }
 
-/** Sends what the room needs to know about our player: song + queue, then play/pause at our position. */
-function announceCurrent() {
-  const t = current();
-  if (!t) return;
+let startedRoom = false;
+/** Copy the timeline's queue and song into the player. */
+function applyTimeline(tl: Timeline) {
+  // A new, empty Vibe: the host's current song (and spot) becomes the room's.
+  if (tl.status === 'idle' && !tl.queue.length) {
+    const cur = current();
+    if (ltIsHost() && cur && !startedRoom) {
+      startedRoom = true;
+      const p = usePlayer.getState();
+      vibe.load(p.queue, p.index, audio.currentTime * 1000);
+      if (!p.playing) setTimeout(() => vibe.pause(), 50);
+    }
+    return;
+  }
+  const q = tl.queue.map(fromVibe);
+  const want = q[tl.index];
+  if (!want) return;
   const p = usePlayer.getState();
-  send({ action: 'change_track', trackId: t.id, trackInfo: toLt(t), queue: p.queue.map(toLt), queueTitle: 'Resona', position: 0 });
-  send({ action: p.playing ? 'play' : 'pause', position: posMs() });
+  if (ids(p.queue) !== ids(q) || p.index !== tl.index) setPlayer({ queue: q, index: tl.index, playing: false, shuffle: false, unshuffled: null, radioFor: null });
+  reconcile();
 }
 
 /**
  * Bridges the local player and a Vibe room. Renders nothing.
  */
 export function ListenTogetherController() {
-  const active = useLt((s) => !!s.session);
+  const active = useLt((s) => !!s.session && s.status === 'live');
 
-  useEffect(() => {
-    resumeRoom();
-    setLtListener({
-      onDenied: () => { setPlayer({ playing: roomPlaying }); requestSync(); },
-      onAddSuggested: (t) => usePlayer.getState().addToQueue([fromLt(t)]), // host: sync_queue goes out automatically
-      onAction: applyAction,
-      onSnapshot: (s) => applySnapshot(s),
-      onBufferComplete: () => {},
-      onUserJoined: () => { if (ltIsHost()) announceCurrent(); },
-    });
-    return () => setLtListener(null);
-  }, []);
+  useEffect(() => { resumeRoom(); }, []);
 
   useEffect(() => {
     if (!active) return;
-    // Player → room.
-    const unsub = usePlayer.subscribe((s, prev) => {
-      if (applying) return;
-      const trackChanged = (s.queue[s.index]?.id ?? null) !== (prev.queue[prev.index]?.id ?? null);
+    // Whatever is loaded right now belongs to the current song.
+    loadedFor = audio.readyState >= HTMLMediaElement.HAVE_METADATA ? current()?.id ?? null : null;
+    startedRoom = false;
+    const onLoaded = () => { loadedFor = current()?.id ?? null; reconcile(); };
+    audio.addEventListener('loadedmetadata', onLoaded);
+    const unsubSong = usePlayer.subscribe((s, prev) => {
+      if ((s.queue[s.index]?.id ?? null) !== (prev.queue[prev.index]?.id ?? null)) { loadedFor = null; songChangedAt = Date.now(); }
+    });
+
+    // Server timeline → player.
+    const unsubTl = useLt.subscribe((s, prev) => { if (s.timeline && s.timeline !== prev.timeline) applyTimeline(s.timeline); });
+    if (timeline()) applyTimeline(timeline()!);
+
+    // Player (local clicks) → requests.
+    const unsubPlayer = usePlayer.subscribe((s, prev) => {
+      if (applying || !inRoom()) return;
+      const curChanged = (s.queue[s.index]?.id ?? null) !== (prev.queue[prev.index]?.id ?? null);
       const queueChanged = ids(s.queue) !== ids(prev.queue);
       const playChanged = s.playing !== prev.playing;
-      if (!trackChanged && !queueChanged && !playChanged) return;
+      if (!curChanged && !queueChanged && !playChanged) return;
 
       if (!ltCanControl()) {
-        // Guests without control: suggest added songs to the host, otherwise snap back to the room.
+        // Friends: songs they add become suggestions to the host; anything else snaps back.
         const added = s.queue.filter((t) => !prev.queue.some((x) => x.id === t.id));
-        if (added.length && !trackChanged) {
-          for (const t of added) suggest(toLt(t));
-          setPlayer({ queue: prev.queue, index: prev.index });
+        if (added.length && !curChanged) {
+          for (const t of added) suggest(toVibe(t));
           toast(added.length > 1 ? `Suggested ${added.length} songs to the host` : `Suggested "${added[0].title}" to the host`);
-        } else if (trackChanged && !(audio.ended || audio.duration - audio.currentTime < 1.5)) {
-          toast('Only the host can change songs in this room');
-          setPlayer({ queue: prev.queue, index: prev.index, playing: prev.playing }); // undo locally
-          requestSync();
-        } else if (playChanged && !trackChanged) {
-          toast('Only the host can play or pause in this room');
-          setPlayer({ playing: prev.playing }); // undo locally
-        }
+        } else if (curChanged || playChanged) toast('Only the host can change what plays', { id: 'vibe-host-only' });
+        setPlayer({ queue: prev.queue, index: prev.index, playing: prev.playing });
+        reconcile();
         return;
       }
 
-      if (trackChanged && s.index >= 0) {
-        const t = s.queue[s.index];
-        // Everyone loads the song; 'play' goes out when our copy actually starts (see onPlaying).
-        send({ action: 'change_track', trackId: t.id, trackInfo: toLt(t), queue: s.queue.map(toLt), queueTitle: 'Resona', position: 0 });
+      if (curChanged) {
+        // New song: everyone loads it and starts together (the server decides when).
+        vibe.load(s.queue, s.index);
+        setPlayer({ playing: false });
         return;
       }
-      if (queueChanged) send({ action: 'sync_queue', queue: s.queue.map(toLt), queueTitle: 'Resona' });
-      if (playChanged) send({ action: s.playing ? 'play' : 'pause', position: posMs() });
+      if (queueChanged) vibe.queue(s.queue, s.index);
+      if (playChanged) {
+        if (s.playing) vibe.play(); else vibe.pause();
+        setPlayer({ playing: prev.playing }); // the server's timeline will apply it, for everyone at once
+        reconcile();
+      }
     });
-    // User seeks (not the ones we make to follow the room).
-    const onSeeked = () => { if (!applying && !isInternalSeek() && now() - ourSeekAt > 1200 && ltCanControl()) send({ action: 'seek', position: posMs() }); };
-    audio.addEventListener('seeked', onSeeked);
 
-    // Host: the moment our audio really starts (new song loaded, after buffering, after a FLAC
-    // switch), tell everyone our exact position, so they start/align with what we actually hear.
-    const onPlaying = () => {
-      const t = current();
-      if (ltIsHost() && t) send({ action: 'play', trackId: t.id, position: heardMs(), serverTime: serverNow() });
+    // Seeks by the user: caught as they start (before the sync loop could pull them back). The
+    // host's go to the room (everyone jumps together); anyone else's are undone by following it.
+    const onSeeked = () => {
+      if (Date.now() - ourSeekAt < 1500 || isInternalSeek()) return;
+      const tl = timeline();
+      if (tl && (audio.ended || (tl.status === 'playing' && atSongEnd(tl)))) return;
+      if (ltCanControl()) { holdUntil = Date.now() + 2000; vibe.seek(audio.currentTime * 1000); }
+      else reconcile();
     };
-    audio.addEventListener('playing', onPlaying);
-    // Host heartbeat every 3 s while playing.
-    const beat = window.setInterval(() => {
-      const t = current();
-      if (ltIsHost() && t && !audio.paused && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) sendAction({ action: 'tick', trackId: t.id, position: heardMs(), serverTime: serverNow() });
-    }, 3000);
-    // Guests: steer toward the host, in three tiers (the usual approach for synced playback):
-    //   under 30 ms → leave it; 30–300 ms → play up to 3% faster/slower until aligned (inaudible);
-    //   over 300 ms → jump, aiming ahead by the time our seeks take to land.
-    let lastJump = 0;
+    const onCanPlay = () => reconcile();
+    audio.addEventListener('seeking', onSeeked);
+    audio.addEventListener('canplay', onCanPlay);
+
+    // Stay on the room's timeline: ignore < 30 ms; 30–300 ms → up to 3% faster/slower (inaudible);
+    // more than 300 ms → jump (reconcile).
     const steer = window.setInterval(() => {
-      if (ltIsHost()) { if (audio.playbackRate !== 1) audio.playbackRate = 1; return; }
-      const host = hostPosition();
-      if (host === null || !roomPlaying || roomRef?.trackId !== current()?.id || audio.paused || audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
-        if (audio.playbackRate !== 1) audio.playbackRate = 1;
+      const tl = timeline();
+      if (Date.now() < holdUntil) return;
+      const want = tl?.queue[tl.index];
+      // A song that hasn't loaded after 6 s (stuck download): reload it; we then join at the room's spot.
+      if (want && current()?.id === want.id && !audioReadyFor(want.id) && songChangedAt && Date.now() - songChangedAt > 6000) {
+        songChangedAt = Date.now();
+        const src = (audio.getAttribute('src') || '').replace(/&retry=\d+$/, '');
+        if (src && !src.startsWith('blob:')) { audio.src = `${src}${src.includes('?') ? '&' : '?'}retry=${Date.now()}`; audio.load(); }
         return;
       }
-      const target = host + outputDelay(); // what the host hears now, plus our own speaker delay
-      const diff = target - audio.currentTime; // + means we're behind
+      if (!tl || tl.status !== 'playing' || serverNow() < tl.at) { if (audio.playbackRate !== 1) audio.playbackRate = 1; return; }
+      if (atSongEnd(tl)) { if (audio.playbackRate !== 1) audio.playbackRate = 1; return; }
+      if (!want || !audioReadyFor(want.id) || audio.paused) { reconcile(); return; }
+      const diff = roomPosition(tl) + outputDelay() - audio.currentTime; // + means we're behind
       const abs = Math.abs(diff);
-      if (abs > 0.3) {
-        if (now() - lastJump < 1500) return; // let the last jump settle first
-        lastJump = now();
-        audio.playbackRate = 1;
-        const started = performance.now();
-        audio.addEventListener('seeked', () => { seekCost = Math.min(1, Math.max(0.03, 0.7 * seekCost + 0.3 * (performance.now() - started) / 1000)); }, { once: true });
-        ourSeekAt = now();
-        seek(target + seekCost);
-      } else if (abs > 0.03) audio.playbackRate = 1 + Math.max(-0.03, Math.min(0.03, diff * 0.5));
+      if (abs > 0.3) { audio.playbackRate = 1; reconcile(); }
+      else if (abs > 0.03) audio.playbackRate = 1 + Math.max(-0.03, Math.min(0.03, diff * 0.5));
       else if (audio.playbackRate !== 1) audio.playbackRate = 1;
     }, 250);
-    syncClock();
-    const clock = window.setInterval(syncClock, 60_000);
 
     return () => {
-      unsub();
-      audio.removeEventListener('seeked', onSeeked);
-      audio.removeEventListener('playing', onPlaying);
-      clearInterval(beat); clearInterval(steer); clearInterval(clock);
+      unsubTl(); unsubPlayer(); unsubSong();
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('seeking', onSeeked);
+      audio.removeEventListener('canplay', onCanPlay);
+      clearInterval(steer); clearTimeout(startTimer);
       audio.playbackRate = 1;
-      roomRef = null;
+      readySentFor = -1; startTimerSeq = -1;
     };
   }, [active]);
 
