@@ -257,6 +257,40 @@ export function PlayerEngine() {
       .catch(() => {});
   }, [track, index, queueLength, repeat, radioFor]);
 
+  // Starting or joining a Vibe while a FLAC / 320 kbps version plays: switch to the YouTube Music
+  // audio at the same spot, so everyone in the Vibe hears the same recording. Leaving the Vibe
+  // upgrades back to FLAC / 320 kbps (if the song has it), also at the same spot.
+  useEffect(() => {
+    const switchSource = (url: string, label: ReturnType<typeof useNowSource.getState>, ext: boolean) => {
+      const at = audio.currentTime;
+      const wasPlaying = !audio.paused;
+      switching.current = true;
+      audio.src = url;
+      onExtension.current = ext;
+      setSource(label);
+      audio.addEventListener('loadedmetadata', () => { markInternalSeek(); audio.currentTime = at; if (wasPlaying) audio.play().catch(() => {}); }, { once: true });
+    };
+    return useLt.subscribe((s, prev) => {
+      const entered = !!s.session && !prev.session;
+      const left = !s.session && !!prev.session;
+      const cur = usePlayer.getState().queue[usePlayer.getState().index];
+      if (!cur || cur.flac || loadedId.current !== cur.id || offlineUrl.current) return;
+      if (entered && onExtension.current) {
+        switchSource(streamUrl(cur.id, useSettings.getState().quality), { label: null }, false);
+      } else if (left && !onExtension.current) {
+        const { extensions, preferExtension, quality, flacMode } = useSettings.getState();
+        const rank = (b: string) => { const i = DEFAULT_EXTENSIONS.findIndex((d) => d.base === b); return i === -1 ? DEFAULT_EXTENSIONS.length : i; };
+        const bases = flacMode ? [LOSSLESS_BASE] : extensions.filter((e) => e.enabled).map((e) => e.base).sort((x, y) => rank(x) - rank(y));
+        if (!preferExtension || quality === 'low' || !bases.length) return;
+        const id = cur.id;
+        resolveExtensionStream(cur, bases).catch(() => null).then((ext) => {
+          if (!ext || loadedId.current !== id || useLt.getState().session) return;
+          switchSource(ext.url, sourceFromStream(ext), true);
+        });
+      }
+    });
+  }, []);
+
   // Element events → store.
   useEffect(() => {
     const st = usePlayer.getState;
