@@ -19,7 +19,7 @@ function visible(el: HTMLElement) {
 
 /** The open dialog, if any (focus stays inside it), else the whole page. */
 function scope(): ParentNode {
-  const dialogs = [...document.querySelectorAll<HTMLElement>('[role=dialog][data-state=open], [role=alertdialog][data-state=open], [role=menu][data-state=open], [role=listbox]')];
+  const dialogs = [...document.querySelectorAll<HTMLElement>('[role=dialog][aria-label="Now playing"], [role=dialog][data-state=open], [role=alertdialog][data-state=open], [role=menu][data-state=open], [role=listbox]')];
   return dialogs.at(-1) ?? document;
 }
 
@@ -87,6 +87,13 @@ export function initTv() {
   document.querySelector('meta[name=viewport]')?.setAttribute('content', 'width=1280, user-scalable=no');
   // Start with the Queue/Lyrics panel closed so the main content gets the screen.
   useUi.getState().setPanel(null);
+  // Like Spotify on TV: pressing play on something opens the full-screen player (and only then;
+  // songs that follow on their own don't pop it up).
+  const { playList, jumpTo } = usePlayer.getState();
+  usePlayer.setState({
+    playList: (tracks, start) => { playList(tracks, start); useUi.getState().setNowPlaying(true); },
+    jumpTo: (i) => { jumpTo(i); useUi.getState().setNowPlaying(true); },
+  });
   (window as unknown as { echoTvBack: () => void }).echoTvBack = tvBack;
 
   window.addEventListener('keydown', (e) => {

@@ -174,3 +174,5 @@
 .tv nav[aria-label="Main"] { overflow-y: auto; scrollbar-width: none; }
 .tv nav[aria-label="Main"] > * { flex-shrink: 0; }
 .tv nav[aria-label="Main"] > .overflow-y-auto { flex: none; overflow: visible; }
+/* TV: no bottom player bar, so Now Playing doesn't keep room for it. */
+.tv .tv-np-stage { padding-bottom: 40px; }
