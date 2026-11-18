@@ -43,6 +43,15 @@ async function serveStatic(pathname: string): Promise<Response> {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let quitting = false;
+
+/** Bring the window back (or create it if it's gone). */
+function showWindow() {
+  if (!mainWindow) { createWindow(); return; }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -69,15 +78,18 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith(ORIGIN)) { e.preventDefault(); external(url); }
   });
+  // macOS (like Spotify): the close button hides the window and the music keeps playing; clicking
+  // Echo in the Dock brings it back. ⌘Q quits for real.
+  mainWindow.on('close', (e) => {
+    if (process.platform === 'darwin' && !quitting) { e.preventDefault(); mainWindow?.hide(); }
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
-  });
+  app.on('second-instance', showWindow);
 
   app.whenReady().then(async () => {
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(iconPath);
@@ -118,7 +130,8 @@ if (!app.requestSingleInstanceLock()) {
       target?.insert(1, new MenuItem(updateItem));
       Menu.setApplicationMenu(menu);
     }
-    app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+    app.on('activate', showWindow);
+    app.on('before-quit', () => { quitting = true; });
   });
 
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
