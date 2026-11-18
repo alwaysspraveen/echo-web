@@ -23,6 +23,21 @@ let roomPlaying = false;
 // Where the host is: `base` ms into `trackId` at server time `at`. Guests steer toward this.
 let roomRef: { trackId?: string; base: number; at: number } | null = null;
 const setRef = (trackId: string | undefined, base: number, at: number | undefined) => { roomRef = { trackId: trackId ?? current()?.id, base, at: at || serverNow() }; };
+// How long this device takes from "playing" to the sound actually coming out of the speakers or
+// headphones (Bluetooth adds 100–300 ms). Positions sent to the room are what the host *hears*,
+// and guests aim for that plus their own delay, so everyone hears the same moment.
+let latencyCtx: AudioContext | null = null;
+const outputDelay = () => {
+  try {
+    latencyCtx ??= new AudioContext({ latencyHint: 'playback' });
+    const s = (latencyCtx.outputLatency || 0) + (latencyCtx.baseLatency || 0);
+    return Number.isFinite(s) && s >= 0 && s < 0.6 ? s : 0;
+  } catch { return 0; }
+};
+/** Our position as heard, in ms (what we report to the room). */
+const heardMs = () => Math.max(0, posMs() - Math.round(outputDelay() * 1000));
+// How long our seeks take to land (measured), so a correction aims a little ahead.
+let seekCost = 0.15;
 /** Where the host is right now, in seconds (on the shared server clock). */
 const hostPosition = () => (roomRef ? (roomRef.base + (roomPlaying ? Math.max(0, serverNow() - roomRef.at) : 0)) / 1000 : null);
 
@@ -39,7 +54,7 @@ const current = () => { const p = usePlayer.getState(); return p.index >= 0 ? p.
 
 /** Seek once the current song can seek. `target` may be a function evaluated at that moment. */
 function seekWhenReady(target: () => number) {
-  const go = () => { const t = target(); if (Math.abs(audio.currentTime - t) > 0.3) { ourSeekAt = now(); seek(t); } };
+  const go = () => { const t = target() + (ltIsHost() ? 0 : outputDelay()); if (Math.abs(audio.currentTime - t) > 0.3) { ourSeekAt = now(); seek(t + (ltIsHost() ? 0 : seekCost)); } };
   if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) go();
   else audio.addEventListener('loadedmetadata', go, { once: true });
 }
@@ -213,28 +228,39 @@ export function ListenTogetherController() {
     // switch), tell everyone our exact position, so they start/align with what we actually hear.
     const onPlaying = () => {
       const t = current();
-      if (ltIsHost() && t) send({ action: 'play', trackId: t.id, position: posMs() });
+      if (ltIsHost() && t) send({ action: 'play', trackId: t.id, position: heardMs(), serverTime: serverNow() });
     };
     audio.addEventListener('playing', onPlaying);
     // Host heartbeat every 3 s while playing.
     const beat = window.setInterval(() => {
       const t = current();
-      if (ltIsHost() && t && !audio.paused && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) sendAction({ action: 'tick', trackId: t.id, position: posMs() });
+      if (ltIsHost() && t && !audio.paused && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) sendAction({ action: 'tick', trackId: t.id, position: heardMs(), serverTime: serverNow() });
     }, 3000);
-    // Guests: steer toward the host. Small drift → play up to 5% faster/slower (inaudible) until
-    // aligned; more than 1 s off → jump.
+    // Guests: steer toward the host, in three tiers (the usual approach for synced playback):
+    //   under 30 ms → leave it; 30–300 ms → play up to 3% faster/slower until aligned (inaudible);
+    //   over 300 ms → jump, aiming ahead by the time our seeks take to land.
+    let lastJump = 0;
     const steer = window.setInterval(() => {
       if (ltIsHost()) { if (audio.playbackRate !== 1) audio.playbackRate = 1; return; }
-      const target = hostPosition();
-      if (target === null || !roomPlaying || roomRef?.trackId !== current()?.id || audio.paused || audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+      const host = hostPosition();
+      if (host === null || !roomPlaying || roomRef?.trackId !== current()?.id || audio.paused || audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
         if (audio.playbackRate !== 1) audio.playbackRate = 1;
         return;
       }
+      const target = host + outputDelay(); // what the host hears now, plus our own speaker delay
       const diff = target - audio.currentTime; // + means we're behind
-      if (Math.abs(diff) > 1) { ourSeekAt = now(); audio.playbackRate = 1; seek(target); }
-      else if (Math.abs(diff) > 0.04) audio.playbackRate = 1 + Math.max(-0.05, Math.min(0.05, diff * 0.6));
+      const abs = Math.abs(diff);
+      if (abs > 0.3) {
+        if (now() - lastJump < 1500) return; // let the last jump settle first
+        lastJump = now();
+        audio.playbackRate = 1;
+        const started = performance.now();
+        audio.addEventListener('seeked', () => { seekCost = Math.min(1, Math.max(0.03, 0.7 * seekCost + 0.3 * (performance.now() - started) / 1000)); }, { once: true });
+        ourSeekAt = now();
+        seek(target + seekCost);
+      } else if (abs > 0.03) audio.playbackRate = 1 + Math.max(-0.03, Math.min(0.03, diff * 0.5));
       else if (audio.playbackRate !== 1) audio.playbackRate = 1;
-    }, 400);
+    }, 250);
     syncClock();
     const clock = window.setInterval(syncClock, 60_000);
 
