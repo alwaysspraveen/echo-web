@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Minimize, Pause, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, Minimize, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { PlayPauseButton } from './PlayPauseButton';
 import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/player/audio';
 import { useCurrentTrack, usePlayer } from '@/player/store';
 import { cn } from '@/lib/utils';
@@ -113,9 +114,7 @@ export function VideoFullscreenControls({ target }: { target: React.RefObject<HT
         />
         <div className="mt-1 flex items-center gap-1 text-white">
           <Btn label="Previous (Shift+P)" onClick={() => p.prev(audio.currentTime)}><SkipBack className="size-5 fill-current" /></Btn>
-          <Btn label={p.playing ? 'Pause (K)' : 'Play (K)'} onClick={p.togglePlay}>
-            {p.playing ? <Pause className="size-6 fill-current" /> : <Play className="size-6 fill-current" />}
-          </Btn>
+          <PlayPauseButton playing={p.playing} onClick={p.togglePlay} size={46} fill="#fff" iconClass="text-black" className="mx-1" />
           <Btn label="Next (Shift+N)" onClick={() => p.next()}><SkipForward className="size-5 fill-current" /></Btn>
           <div className="group/vol flex items-center">
             <Btn label="Mute (M)" onClick={p.toggleMute}><VolumeIcon className="size-5" /></Btn>
