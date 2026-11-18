@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Loader2, Pause, Play } from 'lucide-react';
+import { Pause, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Echo for Android's play button: a rounded square while paused that morphs into a slowly
@@ -26,9 +26,8 @@ function shapePath(size: number, t: number, rot: number) {
   return d + 'Z';
 }
 
-export function PlayPauseButton({ playing, buffering, disabled, onClick, size = 44, className, fill = 'var(--text)', iconClass = 'text-bg' }: {
+export function PlayPauseButton({ playing, disabled, onClick, size = 44, className, fill = 'var(--text)', iconClass = 'text-bg' }: {
   playing: boolean;
-  buffering?: boolean;
   disabled?: boolean;
   onClick: () => void;
   size?: number;
@@ -77,10 +76,9 @@ export function PlayPauseButton({ playing, buffering, disabled, onClick, size = 
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 overflow-visible" aria-hidden>
         <path ref={path} fill={fill} />
       </svg>
-      <span key={buffering ? 'b' : playing ? 'p' : 's'} className={cn('relative animate-in zoom-in-50 fade-in-0 duration-200', iconClass)}>
-        {buffering ? (
-          <Loader2 className="animate-spin" style={{ width: icon, height: icon }} />
-        ) : playing ? (
+      {/* Like Android, the button always shows play/pause, even while buffering. */}
+      <span key={playing ? 'p' : 's'} className={cn('relative animate-in zoom-in-50 fade-in-0 duration-200', iconClass)}>
+        {playing ? (
           <Pause className="fill-current" style={{ width: icon, height: icon }} />
         ) : (
           <Play className="translate-x-[1.5px] fill-current" style={{ width: icon, height: icon }} />

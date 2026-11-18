@@ -11,7 +11,7 @@ import { useNowSource } from '@/player/source';
 import { useEq } from '@/player/equalizer';
 import { openListenTogether } from './ListenTogether';
 import { useLt } from '@/lib/listenTogether';
-import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/player/audio';
+import { audio, formatTime, seek, useDuration, useTime } from '@/player/audio';
 import { useCurrentTrack, usePlayer, useUi } from '@/player/store';
 import { cn } from '@/lib/utils';
 import { Artwork } from './Artwork';
@@ -67,7 +67,6 @@ export function PlayerBar() {
   const sourceLabel = useNowSource((s) => s.label);
   const eqOn = useEq((s) => s.enabled || s.boost !== 1);
   const liked = useIsLiked(track?.id);
-  const buffering = useBuffering();
   const VolumeIcon = s.muted || s.volume === 0 ? VolumeX : s.volume < 0.5 ? Volume1 : Volume2;
 
   return (
@@ -108,7 +107,7 @@ export function PlayerBar() {
           <IconButton label="Previous" onClick={() => s.prev(audio.currentTime)} disabled={!track}>
             <SkipBack className="size-5 fill-current" />
           </IconButton>
-          <PlayPauseButton playing={s.playing} buffering={buffering} disabled={!track} onClick={s.togglePlay} size={46} className="mx-1" />
+          <PlayPauseButton playing={s.playing} disabled={!track} onClick={s.togglePlay} size={46} className="mx-1" />
           <IconButton label="Next" onClick={() => s.next()} disabled={!track}>
             <SkipForward className="size-5 fill-current" />
           </IconButton>

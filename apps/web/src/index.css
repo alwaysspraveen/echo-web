@@ -20,6 +20,9 @@
   --text-faint: #a08c8e;
   --seed: #ed5564;
   --seed-soft: #ffb2b8;
+  /* M3 dark scheme roles: PrimaryContainer = tone 30, OnPrimaryContainer = tone 90 */
+  --primary-container: hsl(354 65% 30%);
+  --on-primary-container: hsl(357 100% 93%);
   --line: rgb(240 222 224 / 0.1);
 
   /* shadcn variable names */
@@ -58,6 +61,8 @@
   --color-text-faint: var(--text-faint);
   --color-seed: var(--seed);
   --color-seed-soft: var(--seed-soft);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
   --color-line: var(--line);
 
   --color-background: var(--background);
