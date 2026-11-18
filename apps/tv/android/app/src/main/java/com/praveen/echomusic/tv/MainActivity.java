@@ -47,6 +47,8 @@ public class MainActivity extends Activity {
         frame.setBackgroundColor(0xFF140D0F);
         setContentView(frame);
 
+        // Lets the WebView be inspected over ADB (only reachable by an authorized ADB host).
+        WebView.setWebContentsDebuggingEnabled(true);
         web = new WebView(this);
         web.setBackgroundColor(0xFF140D0F);
         WebSettings s = web.getSettings();
@@ -111,6 +113,9 @@ public class MainActivity extends Activity {
         Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_PROMPT, "Search songs, artists, albums");
+        // Prefer Google's TV voice input (the remote's mic UI) so Android doesn't ask which app to use.
+        Intent google = new Intent(i).setPackage("com.google.android.katniss");
+        if (google.resolveActivity(getPackageManager()) != null) i = google;
         try { startActivityForResult(i, VOICE_REQUEST); } catch (Exception ignored) { }
     }
 
