@@ -5,7 +5,7 @@ import { QUALITIES, streamAudio, type Quality } from './stream.ts';
 import { findLyrics } from './lyrics.ts';
 import { allowedArtUrl, fetchArt } from './art.ts';
 import { downloadTrack } from './download.ts';
-import { manifestName, normalizeBase, resolveExtension } from './extensions.ts';
+import { isAllowedAudio, manifestName, normalizeBase, resolveExtension } from './extensions.ts';
 import { findCanvas } from './canvas.ts';
 
 const VIDEO_ID = /^[\w-]{11}$/;
@@ -39,6 +39,19 @@ api.get('/extension/resolve', async (c) => {
   if (!base || !title) return c.json({ error: 'Missing base or title' }, 400);
   const stream = await resolveExtension(base, title, artist, Number(c.req.query('duration')) || undefined);
   return stream ? c.json(stream) : c.json({ error: 'Not available on this extension' }, 404);
+});
+
+// Streams an extension's audio through this server (same-origin, so the equalizer can process it).
+api.get('/extension/audio', async (c) => {
+  const url = c.req.query('u') ?? '';
+  if (!isAllowedAudio(url)) return c.json({ error: 'Unknown audio link' }, 403);
+  const upstream = await fetch(url, { headers: c.req.header('range') ? { Range: c.req.header('range')! } : {}, signal: c.req.raw.signal });
+  const headers = new Headers({ 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' });
+  for (const h of ['content-type', 'content-length', 'content-range']) { const v = upstream.headers.get(h); if (v) headers.set(h, v); }
+  if (!upstream.headers.get('content-type') || upstream.headers.get('content-type') === 'application/octet-stream') {
+    if (/flac/i.test(url) || /monochrome/.test(url)) headers.set('Content-Type', 'audio/flac');
+  }
+  return new Response(upstream.body, { status: upstream.status, headers });
 });
 
 api.get('/canvas', async (c) => {

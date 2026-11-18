@@ -99,7 +99,7 @@ const resolved = new Map<string, { at: number; value: AddonStream | null }>();
 export async function resolveExtension(base: string, title: string, artist: string, durationSec?: number): Promise<AddonStream | null> {
   const key = `${base}|${title}|${artist}|${durationSec ?? ''}`;
   const hit = resolved.get(key);
-  if (hit && Date.now() - hit.at < 5 * 60_000) return hit.value; // extension links expire
+  if (hit && Date.now() - hit.at < 5 * 60_000) { if (hit.value) allowAudio(hit.value.url); return hit.value; } // extension links expire
   const primaryArtist = artist.split(/[,&•;/]/)[0]?.trim() || artist;
   const q1 = `${cleanTitle(title)} ${primaryArtist}`.trim();
   const q2 = `${title} ${artist}`.trim();
@@ -109,9 +109,21 @@ export async function resolveExtension(base: string, title: string, artist: stri
     const match = selectBestMatch(found?.tracks ?? [], title, artist, durationSec ? durationSec * 1000 : undefined);
     if (!match) continue;
     const stream = await getJson<AddonStream>(`${base}/stream/${encodeURIComponent(match.id)}?quality=LOSSLESS`, 12000);
-    if (stream?.url && /^https?:\/\//.test(stream.url)) { value = stream; break; }
+    if (stream?.url && /^https?:\/\//.test(stream.url)) { value = stream; allowAudio(stream.url); break; }
   }
   resolved.set(key, { at: Date.now(), value });
   if (resolved.size > 500) resolved.delete(resolved.keys().next().value!);
   return value;
 }
+
+// Audio links returned by extensions, allowed through /api/extension/audio. Proxying keeps the audio
+// same-origin, which the equalizer (Web Audio) needs; only links an extension returned are allowed.
+const allowedAudio = new Map<string, number>();
+export function allowAudio(url: string) {
+  allowedAudio.set(url, Date.now());
+  if (allowedAudio.size > 500) allowedAudio.delete(allowedAudio.keys().next().value!);
+}
+export const isAllowedAudio = (url: string) => {
+  const at = allowedAudio.get(url);
+  return at !== undefined && Date.now() - at < 6 * 60 * 60_000;
+};

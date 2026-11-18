@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  AudioWaveform, Heart, ListMusic, Loader2, MicVocal, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX,
+  AudioWaveform, Heart, ListMusic, SlidersVertical, Loader2, MicVocal, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Slider } from '@/components/ui/slider';
@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { toggleLike, useIsLiked } from '@/lib/db';
 import { DownloadMenu, DownloadStateIcon } from './DownloadMenu';
 import { useNowSource } from '@/player/source';
+import { useEq } from '@/player/equalizer';
 import { openListenTogether } from './ListenTogether';
 import { useLt } from '@/lib/listenTogether';
 import { audio, formatTime, seek, useBuffering, useDuration, useTime } from '@/player/audio';
@@ -63,6 +64,7 @@ export function PlayerBar() {
   const { panel, togglePanel, setNowPlaying } = useUi();
   const inJam = useLt((s) => !!s.session);
   const sourceLabel = useNowSource((s) => s.label);
+  const eqOn = useEq((s) => s.enabled || s.boost !== 1);
   const liked = useIsLiked(track?.id);
   const buffering = useBuffering();
   const VolumeIcon = s.muted || s.volume === 0 ? VolumeX : s.volume < 0.5 ? Volume1 : Volume2;
@@ -136,6 +138,9 @@ export function PlayerBar() {
             </button>
           </DownloadMenu>
         )}
+        <IconButton label="Equalizer" active={eqOn} onClick={() => useEq.getState().set({ open: true })}>
+          <SlidersVertical className="size-[18px]" />
+        </IconButton>
         <IconButton label="Listen Together" active={inJam} onClick={() => (inJam ? togglePanel('jam') : openListenTogether())}>
           <AudioWaveform className="size-[18px]" />
         </IconButton>

@@ -33,7 +33,7 @@ export function fadeIn(ms: number) {
 export function resetFade() { cancelFadeIn?.(); cancelFadeIn = null; gain = 1; applyVolume(); }
 
 /** Second player that keeps the outgoing song's tail playing while it fades out. */
-const fader = typeof Audio !== 'undefined' ? new Audio() : (null as unknown as HTMLAudioElement);
+export const fader = typeof Audio !== 'undefined' ? new Audio() : (null as unknown as HTMLAudioElement);
 let cancelFadeOut: (() => void) | null = null;
 export function fadeOutCurrent(ms: number) {
   if (!fader || !audio.currentSrc) return;
