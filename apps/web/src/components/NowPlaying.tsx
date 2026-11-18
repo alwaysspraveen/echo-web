@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { ChevronDown, Maximize } from 'lucide-react';
 import { useCurrentTrack, useUi } from '@/player/store';
 import { Button } from '@/components/ui/button';
 import { Artwork } from './Artwork';
 import { VideoStage } from './VideoStage';
+import { toggleFullscreen, useIsFullscreen, VideoFullscreenControls } from './VideoFullscreen';
 import { CanvasArt } from './CanvasArt';
 import { useSettings } from '@/lib/settings';
 import { cn } from '@/lib/utils';
@@ -20,13 +21,31 @@ export function NowPlaying() {
   const track = useCurrentTrack();
   const videoMode = useUi((s) => s.videoMode);
   const canvasOn = useSettings((s) => s.canvas);
+  const videoBox = useRef<HTMLDivElement>(null);
+  const fullscreen = useIsFullscreen(videoBox);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    let fsExitAt = 0;
+    const onFs = () => { if (!document.fullscreenElement) fsExitAt = performance.now(); };
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).closest('input, textarea')) return;
+      // Esc that leaves full screen shouldn't also close the player.
+      if (e.key === 'Escape' && !document.fullscreenElement && performance.now() - fsExitAt > 400) close();
+      if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && useUi.getState().videoMode) toggleFullscreen(videoBox.current);
+    };
+    document.addEventListener('fullscreenchange', onFs);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFs);
+      window.removeEventListener('keydown', onKey);
+    };
   }, [open]);
+
+  // Leave full screen when the player closes or switches back to the song.
+  useEffect(() => {
+    if ((!open || !videoMode) && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }, [open, videoMode]);
 
   if (!open || !track) return null;
 
@@ -63,11 +82,29 @@ export function NowPlaying() {
           {/* Size container: the artwork is the largest square that fits both width and height. */}
           <div className="flex min-h-0 items-end py-5" style={{ containerType: 'size' }}>
             {videoMode ? (
-              <VideoStage
-                trackId={track.id}
-                className="aspect-video rounded-[20px] shadow-2xl shadow-black/50"
-                style={{ width: 'min(100cqw, calc(100cqh * 16 / 9), 960px)' }}
-              />
+              <div
+                ref={videoBox}
+                onDoubleClick={() => toggleFullscreen(videoBox.current)}
+                className={cn('group relative', fullscreen && 'size-full bg-black')}
+              >
+                <VideoStage
+                  trackId={track.id}
+                  className={fullscreen ? 'size-full' : 'aspect-video rounded-[20px] shadow-2xl shadow-black/50'}
+                  style={fullscreen ? undefined : { width: 'min(100cqw, calc(100cqh * 16 / 9), 960px)' }}
+                />
+                {fullscreen ? (
+                  <VideoFullscreenControls target={videoBox} />
+                ) : (
+                  <button
+                    onClick={() => toggleFullscreen(videoBox.current)}
+                    aria-label="Full screen (F)"
+                    title="Full screen (F)"
+                    className="absolute right-3 bottom-3 grid size-10 place-items-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  >
+                    <Maximize className="size-5" />
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="relative" style={{ width: 'min(100cqw, 100cqh, 640px)', height: 'min(100cqw, 100cqh, 640px)' }}>
                 <Artwork src={track.thumbnail} className="size-full rounded-[28px] shadow-2xl shadow-black/50" />

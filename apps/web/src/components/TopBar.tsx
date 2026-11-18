@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
-import { ArrowUpRight, ChevronLeft, ChevronRight, Play, Search, X } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight, Mic, Play, Search, X } from 'lucide-react';
+import { cancelVoice, listen, stopVoice, useVoice } from '@/voice/voiceSearch';
 import type { Card } from '@echo/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,16 @@ export function TopBar() {
     navigate(`/search?q=${encodeURIComponent(t)}`);
   };
 
+  const voice = useVoice();
+  const voiceBusy = voice.phase !== 'idle' && voice.phase !== 'error';
+  const startVoice = async () => {
+    if (voice.phase === 'listening') return stopVoice();
+    if (voiceBusy) return;
+    setOpen(false);
+    const said = await listen();
+    if (said) search(said);
+  };
+
   const activate = (o: Option) => {
     if (o.type === 'query') return search(o.text);
     const c = o.card;
@@ -87,7 +98,7 @@ export function TopBar() {
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, options.length - 1)); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, -1)); }
-            else if (e.key === 'Escape') close();
+            else if (e.key === 'Escape') { if (voiceBusy) cancelVoice(); close(); }
           }}
           placeholder="What do you want to play?"
           aria-label="Search"
@@ -98,13 +109,26 @@ export function TopBar() {
           aria-activedescendant={hi >= 0 ? `suggestion-${hi}` : undefined}
           autoComplete="off"
           spellCheck={false}
-          className="rounded-full pr-10 pl-11"
+          className="rounded-full pr-[76px] pl-11"
         />
-        {q && (
-          <button type="button" onClick={() => { setQ(''); input.current?.focus(); }} className="absolute top-1/2 right-3 grid size-7 -translate-y-1/2 place-items-center rounded-full text-text-faint hover:text-text" aria-label="Clear search">
-            <X className="size-4" />
+        <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5">
+          {q && (
+            <button type="button" onClick={() => { setQ(''); input.current?.focus(); }} className="grid size-8 place-items-center rounded-full text-text-faint hover:text-text" aria-label="Clear search">
+              <X className="size-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={startVoice}
+            aria-label={voice.phase === 'listening' ? 'Stop listening' : 'Search with your voice'}
+            title={voice.phase === 'listening' ? 'Stop listening' : 'Search with your voice'}
+            aria-pressed={voiceBusy}
+            className={cn('grid size-8 place-items-center rounded-full', voiceBusy ? 'bg-seed text-white' : 'text-text-faint hover:bg-accent hover:text-text')}
+          >
+            <Mic className="size-[18px]" />
           </button>
-        )}
+        </div>
+        {(voiceBusy || voice.phase === 'error') && <VoicePanel />}
         {showList && (
           <div
             id="search-suggestions"
@@ -164,5 +188,38 @@ export function TopBar() {
         )}
       </form>
     </header>
+  );
+}
+
+/** Shown under the search box while voice search listens or works out what was said. */
+function VoicePanel() {
+  const v = useVoice();
+  const status =
+    v.phase === 'listening' ? (v.interim || 'Listening…')
+    : v.phase === 'loading-model' ? `Getting voice search ready${v.modelProgress ? ` · ${v.modelProgress}%` : '…'}`
+    : v.phase === 'transcribing' ? 'Recognizing…'
+    : v.error;
+  const hint =
+    v.phase === 'listening' ? 'Say a song, artist or album. Stops when you finish talking.'
+    : v.phase === 'loading-model' ? 'One-time download (about 80 MB). After this, voice search starts instantly.'
+    : '';
+  return (
+    <div role="status" aria-live="polite" className="absolute top-full right-0 left-0 z-50 mt-2 flex items-center gap-4 rounded-3xl bg-popover p-4 shadow-2xl shadow-black/40 ring-1 ring-line">
+      <div className="relative grid size-12 shrink-0 place-items-center">
+        {v.phase === 'listening' && (
+          <span className="absolute inset-0 rounded-full bg-seed/35 transition-transform duration-75" style={{ transform: `scale(${1 + v.level * 0.55})` }} />
+        )}
+        <span className={cn('relative grid size-12 place-items-center rounded-full', v.phase === 'error' ? 'bg-surface-high text-text-muted' : 'bg-seed text-white', (v.phase === 'transcribing' || v.phase === 'loading-model') && 'animate-pulse')}>
+          <Mic className="size-5" />
+        </span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className={cn('truncate font-semibold', v.phase === 'error' && 'whitespace-normal text-sm')}>{status}</p>
+        {hint && <p className="text-xs text-text-muted">{hint}</p>}
+      </div>
+      <button type="button" onClick={cancelVoice} className="rounded-full px-3 py-1.5 text-sm text-text-muted hover:bg-accent hover:text-text">
+        {v.phase === 'error' ? 'Close' : 'Cancel'}
+      </button>
+    </div>
   );
 }

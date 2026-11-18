@@ -92,7 +92,10 @@
             "ffmpeg"
           ]
         }
-      ]
+      ],
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Echo Music uses the microphone for voice search."
+      }
     },
     "dmg": {
       "artifactName": "Echo-Music-${version}-${arch}.dmg"
